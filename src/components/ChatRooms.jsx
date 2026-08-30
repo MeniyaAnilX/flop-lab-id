@@ -174,15 +174,20 @@ export default function ChatRooms({ onGoToCreate }) {
       } else if (existingMethod === 'seed') {
         const clean = importSeed.trim();
         if (!clean) throw new Error('Please provide your 64-hexadecimal private seed key');
+        const pass = importPassphrase.trim();
+        if (!pass || pass.length < 8) {
+          throw new Error('Master password is required! Please enter at least 8 characters to unlock and secure this key.');
+        }
         restored = restoreFromSeed(clean);
       } else if (existingMethod === 'file') {
         if (!importJsonText.trim()) throw new Error('Please paste your credential backup file content');
+        const pass = importPassphrase.trim();
+        if (!pass || pass.length < 8) {
+          throw new Error('Master password is required! Please enter at least 8 characters to unlock this backup.');
+        }
         const parsed = JSON.parse(importJsonText.trim());
         if (parsed.format === 'flop_keyseal_v1' || parsed.ciphertext) {
-          if (!importPassphrase.trim()) {
-            throw new Error('This is an encrypted KeySeal backup. Please enter your 8-digit password below.');
-          }
-          restored = await decryptKeyWithPassphrase(parsed, importPassphrase.trim());
+          restored = await decryptKeyWithPassphrase(parsed, pass);
         } else {
           const seed = parsed.seed_64hex || parsed.seed || parsed.privateKey;
           if (!seed) throw new Error('Could not parse seed_64hex from JSON backup data');
@@ -562,17 +567,33 @@ export default function ChatRooms({ onGoToCreate }) {
             {/* Form Fields */}
             <form onSubmit={handleImportIdentity} className="space-y-3.5 pt-1">
               {modalMode === 'existing' && existingMethod === 'seed' && (
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] text-hacker-dim uppercase font-bold tracking-wider">
-                    ENTER 64-HEX SECRET SEED KEY:
-                  </label>
-                  <input
-                    type="password"
-                    value={importSeed}
-                    onChange={(e) => setImportSeed(e.target.value)}
-                    placeholder="Paste 64-character private seed hex string..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
-                  />
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <label className="block text-[11px] text-hacker-dim uppercase font-bold tracking-wider">
+                      ENTER 64-HEX SECRET SEED KEY:
+                    </label>
+                    <input
+                      type="password"
+                      value={importSeed}
+                      onChange={(e) => setImportSeed(e.target.value)}
+                      placeholder="Paste 64-character private seed hex string..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] text-hacker-muted uppercase font-bold tracking-wider">
+                      MASTER PASSWORD (MINIMUM 8 CHARACTERS REQUIRED):
+                    </label>
+                    <input
+                      type="password"
+                      value={importPassphrase}
+                      onChange={(e) => setImportPassphrase(e.target.value)}
+                      placeholder="Enter 8+ digit password to unlock & protect key..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                    />
+                  </div>
+
                   <span className="text-[10px] text-hacker-muted block">
                     Restores your authentic Ed25519 agent DID and signs messages instantly.
                   </span>
@@ -606,13 +627,13 @@ export default function ChatRooms({ onGoToCreate }) {
 
                   <div className="pt-1">
                     <label className="block text-[10px] text-hacker-muted uppercase font-bold tracking-wider mb-1">
-                      PASSWORD (REQUIRED FOR ENCRYPTED KEYSEAL .JSON):
+                      MASTER PASSWORD (MINIMUM 8 CHARACTERS REQUIRED):
                     </label>
                     <input
                       type="password"
                       value={importPassphrase}
                       onChange={(e) => setImportPassphrase(e.target.value)}
-                      placeholder="Enter 8+ digit password to decrypt backup..."
+                      placeholder="Enter 8+ digit password to decrypt & unlock..."
                       className="w-full px-3.5 py-2 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
                     />
                   </div>

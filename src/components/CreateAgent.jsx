@@ -272,31 +272,41 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     }
   };
 
-  // Step 1: Restore Existing Key (for Old Users)
+  // Step 1: Restore Existing Key (Mandatory 8+ Character Password Required)
   const handleRestoreIdentity = async (e) => {
     e?.preventDefault();
     setRestoreError(null);
     try {
+      const pass = restorePassword.trim();
+      if (!pass || pass.length < 8) {
+        throw new Error('Master password is required! Please enter at least 8 characters to unlock and protect your key.');
+      }
+
       let seedHex = restoreSeedText.trim();
+      if (!seedHex) throw new Error('Please paste your 64-hex seed or backup JSON content.');
+
       if (seedHex.startsWith('{')) {
         const parsed = JSON.parse(seedHex);
         if (parsed.format === 'flop_keyseal_v1' || parsed.ciphertext) {
-          if (!restorePassword) {
-            throw new Error('This is an encrypted KeySeal backup. Please enter your 8-digit password below.');
-          }
-          const decrypted = await decryptKeyWithPassphrase(parsed, restorePassword.trim());
+          const decrypted = await decryptKeyWithPassphrase(parsed, pass);
           seedHex = decrypted.seed64Hex;
         } else {
           seedHex = parsed.seed_64hex || parsed.seed || parsed.privateKey || '';
         }
       }
-      if (!seedHex) throw new Error('Please enter a 64-hex seed or valid backup JSON');
+
+      if (!seedHex) throw new Error('Could not parse a valid 64-hex private key.');
       const restored = restoreFromSeed(seedHex);
+
+      // Pre-encrypt key with the provided password
+      const encryptedPkg = await encryptKeyWithPassphrase(restored.seed64Hex, pass, restored.did);
+      setEncryptedKeyPackage(encryptedPkg);
+
       setIdentity(restored);
       setSeedSavedConfirmed(true);
       if (onAgentCreated) onAgentCreated(restored);
     } catch (err) {
-      setRestoreError(err.message || 'Invalid 64-hex seed or backup JSON');
+      setRestoreError(err.message || 'Invalid 64-hex seed, backup JSON, or incorrect password.');
     }
   };
 
@@ -833,13 +843,16 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
 
                     <div className="space-y-1">
                       <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
-                        PASSWORD (IF BACKUP IS ENCRYPTED):
+                        MASTER PASSWORD (MINIMUM 8 CHARACTERS REQUIRED):
                       </label>
                       <input
                         type="password"
                         value={restorePassword}
-                        onChange={(e) => setRestorePassword(e.target.value)}
-                        placeholder="Enter 8-digit password..."
+                        onChange={(e) => {
+                          setRestorePassword(e.target.value);
+                          if (restoreError) setRestoreError(null);
+                        }}
+                        placeholder="Enter 8+ digit password to unlock & secure key..."
                         className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
                       />
                     </div>
