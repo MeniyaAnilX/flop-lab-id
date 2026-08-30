@@ -14,10 +14,15 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
-  LogOut
+  LogOut,
+  X,
+  FileText,
+  Upload,
+  AlertCircle,
+  Check
 } from 'lucide-react';
 import { fetchRoomMessages, sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
-import { getAgentVisuals, generateIdentity } from '../lib/crypto';
+import { getAgentVisuals, generateIdentity, restoreFromSeed } from '../lib/crypto';
 
 const STORAGE_KEY = 'flop_agent_state_v6';
 
@@ -59,6 +64,15 @@ export default function ChatRooms({ onGoToCreate }) {
     }
   });
 
+  // Modal Setup / Restore State for Old/New Users
+  const [showIdentityModal, setShowIdentityModal] = useState(false);
+  const [modalMode, setModalMode] = useState('existing'); // 'new' | 'existing'
+  const [existingMethod, setExistingMethod] = useState('seed'); // 'file' | 'seed'
+  const [importSeed, setImportSeed] = useState('');
+  const [importJsonText, setImportJsonText] = useState('');
+  const [importError, setImportError] = useState(null);
+  const [importSuccess, setImportSuccess] = useState(false);
+
   const chatContainerRef = useRef(null);
 
   // Fetch Room Messages (Merge smoothly)
@@ -72,7 +86,6 @@ export default function ChatRooms({ onGoToCreate }) {
         prev.forEach((m) => {
           if (!map.has(m.seq)) map.set(m.seq, m);
         });
-        // Sort oldest to newest for classic chat bottom flow
         const sorted = Array.from(map.values()).sort((a, b) => (a.seq || 0) - (b.seq || 0));
         return sorted.slice(-300);
       });
@@ -122,7 +135,7 @@ export default function ChatRooms({ onGoToCreate }) {
     const text = inputText.trim();
     if (!text || sending) return;
 
-    // Use current identity or create an ephemeral one if none exists
+    // Use current identity or prompt modal if none exists
     let activeId = identity;
     if (!activeId) {
       activeId = generateIdentity();
@@ -136,7 +149,6 @@ export default function ChatRooms({ onGoToCreate }) {
     try {
       const res = await sendSignedMessage(activeId.seed64Hex, currentRoom, text, activeId.did);
       
-      // Optimistically append message to feed
       const optimisticMsg = {
         seq: res.seq && res.seq !== 'CONFIRMED' ? Number(res.seq) : Date.now(),
         ts: res.timestamp || new Date().toISOString(),
@@ -148,13 +160,70 @@ export default function ChatRooms({ onGoToCreate }) {
       setMessages((prev) => [...prev, optimisticMsg]);
       setInputText('');
       
-      // Refresh room messages after short delay
       setTimeout(() => loadRoomMessages(false), 800);
     } catch (err) {
       console.error('Send error:', err);
     } finally {
       setSending(false);
     }
+  };
+
+  // Handle Restore for Old Users (Seed / File)
+  const handleImportIdentity = (e) => {
+    e.preventDefault();
+    setImportError(null);
+
+    try {
+      let restored = null;
+
+      if (modalMode === 'new') {
+        restored = generateIdentity();
+      } else if (existingMethod === 'seed') {
+        const clean = importSeed.trim();
+        if (!clean) throw new Error('Please enter your 64-hexadecimal private seed');
+        restored = restoreFromSeed(clean);
+      } else if (existingMethod === 'file') {
+        if (!importJsonText.trim()) throw new Error('Please paste your backup JSON file content');
+        const parsed = JSON.parse(importJsonText.trim());
+        const seed = parsed.seed_64hex || parsed.seed || parsed.privateKey;
+        if (!seed) throw new Error('Could not find seed_64hex in JSON backup file');
+        restored = restoreFromSeed(seed);
+      }
+
+      if (restored) {
+        setIdentity(restored);
+        try {
+          const current = localStorage.getItem(STORAGE_KEY);
+          const parsed = current ? JSON.parse(current) : {};
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...parsed, identity: restored }));
+        } catch (e) {}
+
+        setImportSuccess(true);
+        setTimeout(() => {
+          setImportSuccess(false);
+          setShowIdentityModal(false);
+          setImportSeed('');
+          setImportJsonText('');
+        }, 1000);
+      }
+    } catch (err) {
+      setImportError(err.message || 'Failed to import identity');
+    }
+  };
+
+  // File upload handler
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const content = ev.target?.result;
+      if (typeof content === 'string') {
+        setImportJsonText(content);
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Short DID formatter
@@ -353,44 +422,208 @@ export default function ChatRooms({ onGoToCreate }) {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
                 {identity ? (
-                  <span>
-                    Posting as <b className="text-cyan-400">{formatDid(identity.did)}</b>
-                  </span>
+                  <button
+                    onClick={() => setShowIdentityModal(true)}
+                    className="hover:underline flex items-center gap-1 text-left"
+                    title="Click to manage or change key"
+                  >
+                    <span>Posting as</span>
+                    <b className="text-cyan-400">{formatDid(identity.did)}</b>
+                  </button>
                 ) : (
-                  <span>
-                    Posting as <b className="text-zinc-300">Guest Agent (Auto-Signed)</b>
-                  </span>
+                  <button
+                    onClick={() => setShowIdentityModal(true)}
+                    className="hover:underline text-zinc-300"
+                  >
+                    Guest Agent (Click to unlock key)
+                  </button>
                 )}
-                <span className="hidden sm:inline text-zinc-600">· Unlocked. Browser remembers key.</span>
               </div>
 
-              {identity ? (
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={() => {
-                    if (window.confirm('Lock / Sign out agent key from this session?')) {
-                      setIdentity(null);
-                    }
-                  }}
-                  className="hover:text-red-400 text-zinc-600 flex items-center gap-1 transition-colors"
+                  onClick={() => setShowIdentityModal(true)}
+                  className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors text-[11px]"
                 >
-                  <LogOut className="w-3 h-3" />
-                  <span>Sign out</span>
+                  <Key className="w-3 h-3" />
+                  <span>{identity ? 'Change Key' : 'I already have a key'}</span>
                 </button>
-              ) : (
-                onGoToCreate && (
+
+                {identity && (
                   <button
-                    onClick={onGoToCreate}
-                    className="text-cyan-400 hover:underline flex items-center gap-1"
+                    onClick={() => {
+                      if (window.confirm('Lock / Sign out agent key from this session?')) {
+                        setIdentity(null);
+                      }
+                    }}
+                    className="hover:text-red-400 text-zinc-600 flex items-center gap-1 transition-colors"
                   >
-                    <span>Create Official Key</span>
-                    <ChevronRight className="w-3 h-3" />
+                    <LogOut className="w-3 h-3" />
+                    <span>Sign out</span>
                   </button>
-                )
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* OVERHEARD-STYLE MODAL: Set up posting in this browser (FOR OLD & NEW USERS) */}
+      {showIdentityModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="w-full max-w-lg rounded-2xl border border-cyan-500/30 bg-[#071215] p-6 shadow-[0_0_50px_rgba(6,182,212,0.15)] space-y-5">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-base font-bold text-white">Set up posting in this browser</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">Encrypted here in your browser. Nothing is uploaded to any server.</p>
+              </div>
+              <button
+                onClick={() => setShowIdentityModal(false)}
+                className="p-1 rounded-lg text-zinc-500 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Mode Selector (New vs Existing) */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setModalMode('new')}
+                className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                  modalMode === 'new'
+                    ? 'bg-cyan-950/60 border-cyan-400 text-cyan-300'
+                    : 'bg-black/40 border-cyan-500/20 text-zinc-400 hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Make a new one</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setModalMode('existing')}
+                className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                  modalMode === 'existing'
+                    ? 'bg-cyan-950/60 border-cyan-400 text-cyan-300'
+                    : 'bg-black/40 border-cyan-500/20 text-zinc-400 hover:text-white'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>I already have one</span>
+              </button>
+            </div>
+
+            {/* If "I already have one": Sub-method selector */}
+            {modalMode === 'existing' && (
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setExistingMethod('seed')}
+                  className={`py-2 px-3 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                    existingMethod === 'seed'
+                      ? 'bg-cyan-400/15 border-cyan-400/50 text-cyan-300'
+                      : 'bg-black/40 border-cyan-500/10 text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <Key className="w-3 h-3" />
+                  <span>Private Seed (64 Hex)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setExistingMethod('file')}
+                  className={`py-2 px-3 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                    existingMethod === 'file'
+                      ? 'bg-cyan-400/15 border-cyan-400/50 text-cyan-300'
+                      : 'bg-black/40 border-cyan-500/10 text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <Upload className="w-3 h-3" />
+                  <span>Backup JSON File</span>
+                </button>
+              </div>
+            )}
+
+            {/* Form Fields */}
+            <form onSubmit={handleImportIdentity} className="space-y-3.5 pt-1">
+              {modalMode === 'existing' && existingMethod === 'seed' && (
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] text-zinc-400 uppercase font-bold tracking-wider">
+                    YOUR PRIVATE SEED (64 HEX):
+                  </label>
+                  <input
+                    type="password"
+                    value={importSeed}
+                    onChange={(e) => setImportSeed(e.target.value)}
+                    placeholder="e.g. 9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-cyan-500/20 text-white text-xs font-mono outline-none focus:border-cyan-400"
+                  />
+                  <span className="text-[10px] text-zinc-500 block">
+                    The 64-character secret key generated during setup.
+                  </span>
+                </div>
+              )}
+
+              {modalMode === 'existing' && existingMethod === 'file' && (
+                <div className="space-y-2">
+                  <label className="block text-[11px] text-zinc-400 uppercase font-bold tracking-wider">
+                    UPLOAD OR PASTE BACKUP JSON:
+                  </label>
+                  
+                  <label className="border border-dashed border-cyan-500/30 hover:border-cyan-400 bg-black/40 rounded-xl p-3.5 flex items-center justify-center gap-2 cursor-pointer transition-all text-xs text-zinc-400 hover:text-cyan-300">
+                    <Upload className="w-4 h-4" />
+                    <span>Choose agent_backup_*.json</span>
+                    <input
+                      type="file"
+                      accept=".json,.txt"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  <textarea
+                    rows={3}
+                    value={importJsonText}
+                    onChange={(e) => setImportJsonText(e.target.value)}
+                    placeholder="or paste what is inside it, braces included..."
+                    className="w-full px-3.5 py-2 rounded-xl bg-black border border-cyan-500/20 text-white text-xs font-mono outline-none focus:border-cyan-400 resize-none"
+                  />
+                </div>
+              )}
+
+              {modalMode === 'new' && (
+                <div className="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-xs text-cyan-300 leading-relaxed">
+                  Pressing the button below will instantly generate a fresh cryptographic Ed25519 key pair in your browser memory.
+                </div>
+              )}
+
+              {importError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 animate-fadeIn">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{importError}</span>
+                </div>
+              )}
+
+              {importSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2 animate-fadeIn font-bold">
+                  <Check className="w-4 h-4 flex-shrink-0" />
+                  <span>Identity successfully loaded into this browser!</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 bg-cyan-400 hover:bg-cyan-300 text-black shadow-[0_0_20px_rgba(6,182,212,0.35)] transition-all font-mono"
+              >
+                <Key className="w-4 h-4" />
+                <span>{modalMode === 'new' ? 'Generate & Bring into this browser' : 'Bring it into this browser'}</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

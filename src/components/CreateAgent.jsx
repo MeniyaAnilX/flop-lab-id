@@ -27,7 +27,7 @@ import {
   Activity
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { generateIdentity } from '../lib/crypto';
+import { generateIdentity, restoreFromSeed } from '../lib/crypto';
 import { sendSignedMessage, publishKvNote, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
 const STORAGE_KEY = 'flop_agent_state_v6';
@@ -230,6 +230,10 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const [showRestoreBox, setShowRestoreBox] = useState(false);
+  const [restoreSeedText, setRestoreSeedText] = useState('');
+  const [restoreError, setRestoreError] = useState(null);
+
   // Step 1: Create Key
   const handleCreateIdentity = () => {
     try {
@@ -239,6 +243,27 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
       if (onAgentCreated) onAgentCreated(newIdentity);
     } catch (err) {
       setError(err.message || 'Failed to generate key');
+    }
+  };
+
+  // Step 1: Restore Existing Key (for Old Users)
+  const handleRestoreIdentity = (e) => {
+    e?.preventDefault();
+    setRestoreError(null);
+    try {
+      let seedHex = restoreSeedText.trim();
+      if (seedHex.startsWith('{')) {
+        const parsed = JSON.parse(seedHex);
+        seedHex = parsed.seed_64hex || parsed.seed || parsed.privateKey || '';
+      }
+      if (!seedHex) throw new Error('Please enter a 64-hex seed or valid backup JSON');
+      const restored = restoreFromSeed(seedHex);
+      setIdentity(restored);
+      setSeedSavedConfirmed(true);
+      setShowRestoreBox(false);
+      if (onAgentCreated) onAgentCreated(restored);
+    } catch (err) {
+      setRestoreError(err.message || 'Invalid 64-hex seed or backup JSON');
     }
   };
 
@@ -634,17 +659,55 @@ Positioned and ready for $FLOP.` : '';
           </div>
 
           {!identity ? (
-            <div>
-              <p className="text-xs text-hacker-muted mb-3">
+            <div className="space-y-3">
+              <p className="text-xs text-hacker-muted">
                 One press. Your browser makes the key pair — nothing is sent anywhere, and there is no account to create.
               </p>
-              <button
-                onClick={handleCreateIdentity}
-                className="btn-white w-full py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Create my identity</span>
-              </button>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  onClick={handleCreateIdentity}
+                  className="btn-white py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Create New Identity</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowRestoreBox(!showRestoreBox)}
+                  className="btn-outline py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-hacker-border hover:border-white"
+                >
+                  <Key className="w-4 h-4" />
+                  <span>I Already Have a Key</span>
+                </button>
+              </div>
+
+              {showRestoreBox && (
+                <div className="p-4 rounded-xl bg-black border border-white/20 space-y-2.5 animate-fadeIn mt-2">
+                  <span className="text-[11px] font-bold text-white uppercase block">
+                    Restore Existing Identity (64-Hex Seed or Backup JSON):
+                  </span>
+                  <input
+                    type="password"
+                    value={restoreSeedText}
+                    onChange={(e) => setRestoreSeedText(e.target.value)}
+                    placeholder="Paste 64-hex seed or backup JSON content..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                  />
+                  {restoreError && (
+                    <p className="text-xs text-red-400 font-bold">{restoreError}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleRestoreIdentity}
+                    className="btn-white w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Unlock & Restore Identity</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-black p-3.5 rounded-xl border border-hacker-border space-y-1">
