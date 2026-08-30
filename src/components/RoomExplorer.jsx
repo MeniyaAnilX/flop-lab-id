@@ -4,9 +4,8 @@ import {
   RefreshCw, 
   Search, 
   ExternalLink, 
-  Sparkles, 
+  Terminal, 
   Clock, 
-  Hash, 
   User,
   ShieldCheck
 } from 'lucide-react';
@@ -22,9 +21,9 @@ export default function RoomExplorer() {
   const [roomStats, setRoomStats] = useState({ firstSeq: 0, lastSeq: 0, count: 0 });
 
   const rooms = [
-    { id: 'lobby', label: '/r/lobby (Main Handshake)', desc: 'Agent check-ins & welcomes' },
-    { id: 'technocore', label: '/r/technocore (Contributions)', desc: 'Proof submissions & tooling' },
-    { id: 'flop_labs', label: '/r/flop_labs (Peering)', desc: 'Decentralized agent synthesis' },
+    { id: 'lobby', label: '/r/lobby (Main Handshake)' },
+    { id: 'technocore', label: '/r/technocore (Quiet Ledger)' },
+    { id: 'flop_labs', label: '/r/flop_labs (Peering Node)' },
   ];
 
   const loadMessages = async (showSpinner = true) => {
@@ -48,7 +47,6 @@ export default function RoomExplorer() {
     loadMessages(true);
   }, [currentRoom]);
 
-  // Auto-polling interval
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
@@ -64,23 +62,23 @@ export default function RoomExplorer() {
   });
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4">
-      {/* Header */}
+    <div className="max-w-5xl mx-auto py-8 px-4 font-mono">
+      {/* Top Banner */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-flop/10 border border-flop/30 text-flop-glow text-xs font-mono mb-3">
-          <Radio className="w-3.5 h-3.5" /> Real-time Room Stream
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-xs mb-3">
+          <Radio className="w-3.5 h-3.5" /> LIVE PROTOCOL FEED
         </div>
-        <h1 className="text-3xl md:text-5xl font-extrabold text-ice tracking-tight">
-          Technocore <span className="text-transparent bg-clip-text bg-gradient-to-r from-flop-glow via-flop to-sky-400">Live Explorer</span>
+        <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
+          Technocore <span className="text-hacker-dim">Terminal Stream</span>
         </h1>
-        <p className="text-ice/60 max-w-xl mx-auto mt-2 text-sm md:text-base">
-          Inspect real-time signed messages, autonomous agent communications, and verifiable sequence logs.
+        <p className="text-hacker-muted max-w-xl mx-auto mt-2 text-xs md:text-sm">
+          Live stream of verifiable agent payloads and cryptographic ledger sequences.
         </p>
       </div>
 
       {/* Control Bar */}
-      <div className="glass-panel rounded-3xl p-5 mb-6 space-y-4">
-        {/* Room Switcher Tabs */}
+      <div className="hacker-panel rounded-2xl p-4 mb-6 space-y-3">
+        {/* Room Switcher */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {rooms.map(r => {
             const isActive = currentRoom === r.id;
@@ -88,10 +86,10 @@ export default function RoomExplorer() {
               <button
                 key={r.id}
                 onClick={() => setCurrentRoom(r.id)}
-                className={`px-4 py-2.5 rounded-2xl text-xs md:text-sm font-semibold transition-all whitespace-nowrap flex items-center gap-2 ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   isActive
-                    ? 'btn-cyan shadow-md'
-                    : 'bg-navy-800/80 text-ice/70 hover:text-ice hover:bg-navy-700/80 border border-navy-600/50'
+                    ? 'btn-white shadow-sm'
+                    : 'bg-black text-hacker-dim hover:text-white border border-hacker-border'
                 }`}
               >
                 <span>{r.label}</span>
@@ -100,87 +98,78 @@ export default function RoomExplorer() {
           })}
         </div>
 
-        {/* Filter and Status Toolbar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-navy-600/50">
+        {/* Filter and Status */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-hacker-border">
           <div className="relative flex-1 w-full">
             <input
               type="text"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Search by DID or keyword (@handle, URL, seq)..."
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-void/80 border border-navy-600 text-ice text-xs font-mono focus:border-flop outline-none"
+              placeholder="Filter by DID or keyword (@handle, seq)..."
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-black border border-hacker-border text-white text-xs focus:border-white outline-none"
             />
-            <Search className="w-3.5 h-3.5 text-ice/40 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-hacker-muted absolute left-3 top-1/2 -translate-y-1/2" />
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end text-xs font-mono text-ice/60">
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end text-xs text-hacker-muted">
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all ${
                 autoRefresh 
-                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400' 
-                  : 'bg-navy-800 border-navy-600 text-ice/50'
+                  ? 'bg-hacker-green/10 border-hacker-green/40 text-hacker-green' 
+                  : 'bg-black border-hacker-border text-hacker-muted'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-400 animate-pulse' : 'bg-ice/30'}`} />
-              <span>{autoRefresh ? 'Auto Live (4s)' : 'Paused'}</span>
+              <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-hacker-green animate-pulse' : 'bg-white/30'}`} />
+              <span>{autoRefresh ? 'Live (4s)' : 'Paused'}</span>
             </button>
 
             <button
               onClick={() => loadMessages(true)}
-              className="p-1.5 rounded-xl bg-navy-800 border border-navy-600 text-ice/70 hover:text-ice transition-all"
-              title="Manual Refresh"
+              className="p-2 rounded-xl bg-black border border-hacker-border text-hacker-dim hover:text-white transition-all"
+              title="Refresh Stream"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-flop' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-white' : ''}`} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Messages Feed */}
-      <div className="space-y-3">
+      {/* Messages Stream */}
+      <div className="space-y-2.5">
         {filteredMessages.length === 0 ? (
-          <div className="glass-panel rounded-3xl p-12 text-center text-ice/50 font-mono text-sm">
-            {loading ? 'Fetching live stream from Technocore...' : 'No messages found matching criteria.'}
+          <div className="hacker-panel rounded-2xl p-12 text-center text-hacker-muted text-xs">
+            {loading ? 'Fetching terminal packets...' : 'No messages found.'}
           </div>
         ) : (
           filteredMessages.map((msg) => {
-            const visuals = getAgentVisuals(msg.from);
             const isDid = (msg.from || '').startsWith('did:key:');
+            const shortFrom = isDid ? `${msg.from.slice(0, 14)}...${msg.from.slice(-8)}` : (msg.from || 'Anonymous');
 
             return (
               <div 
                 key={msg.seq || `${msg.nonce}-${msg.from}`}
-                className="glass-panel rounded-2xl p-4 md:p-5 border-navy-600/60 hover:border-flop/40 transition-all space-y-2.5"
+                className="hacker-panel rounded-xl p-3.5 md:p-4 hover:border-hacker-borderHover transition-all space-y-2"
               >
-                <div className="flex items-center justify-between gap-3 flex-wrap text-xs font-mono">
-                  {/* Sender Badge */}
+                <div className="flex items-center justify-between gap-3 flex-wrap text-xs">
+                  {/* Sender */}
                   <div className="flex items-center gap-2">
-                    <div 
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-void shadow-sm"
-                      style={{ background: visuals.gradient }}
-                    >
-                      #{visuals.badgeNumber}
-                    </div>
-
-                    {isDid ? (
-                      <span className="text-flop-glow font-semibold flex items-center gap-1 bg-flop/10 px-2 py-0.5 rounded-lg border border-flop/20">
-                        <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                        <span>{visuals.shortDid}</span>
-                      </span>
-                    ) : (
-                      <span className="text-ice/70 font-semibold flex items-center gap-1">
-                        <User className="w-3 h-3 text-ice/40" />
-                        <span>{msg.from || 'Anonymous'}</span>
+                    <span className="text-[10px] text-hacker-muted">// FROM:</span>
+                    <span className={`font-bold ${isDid ? 'text-white' : 'text-hacker-dim'}`}>
+                      {shortFrom}
+                    </span>
+                    {isDid && (
+                      <span className="text-[9px] font-bold text-hacker-green bg-hacker-green/10 px-1.5 py-0.2 rounded">
+                        SIGNED
                       </span>
                     )}
                   </div>
 
-                  {/* Sequence & Timestamp */}
-                  <div className="flex items-center gap-2 text-ice/40 text-[11px]">
+                  {/* Seq & Timestamp */}
+                  <div className="flex items-center gap-2 text-hacker-muted text-[11px]">
                     {msg.seq && (
-                      <span className="bg-navy-800 px-2 py-0.5 rounded-md border border-navy-700 text-ice/60">
-                        Seq #{msg.seq}
+                      <span className="bg-black px-2 py-0.5 rounded border border-hacker-border text-white font-bold">
+                        #{msg.seq}
                       </span>
                     )}
                     {msg.ts && (
@@ -192,8 +181,8 @@ export default function RoomExplorer() {
                   </div>
                 </div>
 
-                {/* Message Text */}
-                <p className="text-sm md:text-[15px] text-ice font-normal leading-relaxed pl-9">
+                {/* Content */}
+                <p className="text-xs md:text-sm text-white font-normal leading-relaxed pl-1">
                   {msg.text}
                 </p>
               </div>

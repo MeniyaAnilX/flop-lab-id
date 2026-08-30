@@ -4,10 +4,9 @@ import {
   ShieldCheck, 
   CheckCircle2, 
   AlertCircle, 
-  Sparkles, 
+  Terminal, 
   Key, 
   RefreshCw, 
-  ExternalLink,
   Layers,
   Award
 } from 'lucide-react';
@@ -29,10 +28,7 @@ export default function VerifyAgent() {
     setResult(null);
 
     try {
-      // 1. Validate DID Format
       const parsed = parseDid(didInput.trim());
-      
-      // 2. Query Technocore
       const status = await verifyDidStatus(parsed.did);
       
       setResult({
@@ -48,22 +44,22 @@ export default function VerifyAgent() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      {/* Header */}
+    <div className="max-w-4xl mx-auto py-8 px-4 font-mono">
+      {/* Top Banner */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-flop/10 border border-flop/30 text-flop-glow text-xs font-mono mb-3">
-          <Search className="w-3.5 h-3.5" /> Real-time Ledger Verification
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-xs mb-3">
+          <Terminal className="w-3.5 h-3.5" /> LEDGER DIAGNOSTIC TOOL
         </div>
-        <h1 className="text-3xl md:text-5xl font-extrabold text-ice tracking-tight">
-          Airdrop <span className="text-transparent bg-clip-text bg-gradient-to-r from-flop-glow via-flop to-sky-400">Eligibility Checker</span>
+        <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
+          Verify <span className="text-hacker-dim">Agent Eligibility</span>
         </h1>
-        <p className="text-ice/60 max-w-xl mx-auto mt-2 text-sm md:text-base">
-          Check if your AI Agent DID is mathematically valid and registered on the live Technocore network.
+        <p className="text-hacker-muted max-w-xl mx-auto mt-2 text-xs md:text-sm">
+          Run a cryptographic audit on any DID to verify mathematical validity and ledger status.
         </p>
       </div>
 
-      {/* Input Box */}
-      <div className="glass-panel rounded-3xl p-6 md:p-8 mb-8 border-navy-600/70">
+      {/* Query Bar */}
+      <div className="hacker-panel rounded-2xl p-4 md:p-6 mb-8">
         <form onSubmit={handleVerify} className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
             <input
@@ -71,108 +67,93 @@ export default function VerifyAgent() {
               value={didInput}
               onChange={(e) => setDidInput(e.target.value)}
               placeholder="Paste public DID (did:key:z6Mk...)"
-              className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-void/80 border border-navy-600 text-ice text-sm font-mono focus:border-flop outline-none"
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono focus:border-white outline-none"
             />
-            <Key className="w-4 h-4 text-flop absolute left-4 top-1/2 -translate-y-1/2" />
+            <Key className="w-4 h-4 text-hacker-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
           </div>
 
           <button
             type="submit"
             disabled={loading || !didInput.trim()}
-            className="w-full sm:w-auto btn-cyan px-8 py-3.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg"
+            className="w-full sm:w-auto btn-white px-6 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md"
           >
-            {loading ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin text-void" />
-                <span>Checking...</span>
-              </>
-            ) : (
-              <>
-                <Search className="w-4 h-4 text-void" />
-                <span>Verify DID</span>
-              </>
-            )}
+            {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+            <span>Run Audit</span>
           </button>
         </form>
 
         {error && (
-          <div className="mt-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono flex items-center gap-2">
+          <div className="mt-4 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
       </div>
 
-      {/* Verification Result */}
+      {/* Result Card */}
       {result && (
-        <div className="glass-panel-glow rounded-3xl p-6 md:p-8 space-y-6 animate-fadeIn">
-          {/* Header Status Banner */}
-          <div className="flex items-center justify-between gap-4 flex-wrap pb-6 border-b border-navy-600/60">
+        <div className="hacker-panel rounded-3xl p-6 md:p-8 space-y-6 animate-fadeIn border-white/50">
+          {/* Header Status */}
+          <div className="flex items-center justify-between gap-4 flex-wrap pb-6 border-b border-hacker-border">
             <div className="flex items-center gap-3.5">
-              <div 
-                className="w-14 h-14 rounded-2xl flex items-center justify-center text-void font-extrabold text-lg shadow-md"
-                style={{ background: result.visuals?.gradient }}
-              >
-                #{result.visuals?.badgeNumber}
+              <div className="w-12 h-12 rounded-xl bg-white text-black flex items-center justify-center font-bold text-lg">
+                <Terminal className="w-6 h-6 stroke-[2.5]" />
               </div>
               <div>
-                <h3 className="font-extrabold text-xl text-ice flex items-center gap-2">
-                  <span>Agent Verified</span>
-                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                  <span>Cryptographic Audit Passed</span>
+                  <ShieldCheck className="w-5 h-5 text-hacker-green" />
                 </h3>
-                <p className="text-xs font-mono text-ice/60 break-all">{result.did}</p>
+                <p className="text-xs text-hacker-muted break-all">{result.did}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 bg-emerald-500/15 border border-emerald-500/40 px-4 py-2 rounded-2xl">
-              <Award className="w-5 h-5 text-emerald-400" />
-              <div>
-                <span className="text-[10px] font-mono text-emerald-300 block uppercase">Eligibility Score</span>
-                <span className="text-sm font-bold font-mono text-emerald-400">100% READY</span>
-              </div>
+            <div className="bg-hacker-green/10 border border-hacker-green/40 px-4 py-2 rounded-xl">
+              <span className="text-[10px] text-hacker-green block uppercase">// ELIGIBILITY STATUS</span>
+              <span className="text-sm font-bold text-hacker-green">100% QUALIFIED</span>
             </div>
           </div>
 
           {/* 3-Layer Proof Checklist */}
           <div className="space-y-3">
-            <h4 className="text-xs font-mono uppercase tracking-wider text-flop flex items-center gap-2">
-              <Layers className="w-4 h-4" /> 3-Layer Verification Checklist
+            <h4 className="text-xs uppercase tracking-wider text-hacker-muted flex items-center gap-2">
+              <Layers className="w-4 h-4" /> // 3-LAYER CRYPTOGRAPHIC AUDIT
             </h4>
 
             {/* Check 1: Cryptography */}
-            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-void/60 border border-navy-600/60">
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-black border border-hacker-border">
               <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-hacker-green flex-shrink-0" />
                 <div>
-                  <span className="text-sm font-semibold text-ice block">W3C Ed25519 Cryptographic Standard</span>
-                  <span className="text-xs text-ice/50 font-mono">Fingerprint: {result.fingerprint} (Valid Multicodec 0xed01)</span>
+                  <span className="text-xs font-bold text-white block">W3C Ed25519 Cryptographic Standard</span>
+                  <span className="text-[11px] text-hacker-muted">Fingerprint: {result.fingerprint} (Header 0xed01 valid)</span>
                 </div>
               </div>
-              <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg">PASSED</span>
+              <span className="text-[10px] font-bold text-hacker-green bg-hacker-green/10 px-2 py-0.5 rounded">PASSED</span>
             </div>
 
-            {/* Check 2: Lobby Handshake */}
-            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-void/60 border border-navy-600/60">
+            {/* Check 2: Handshake */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-black border border-hacker-border">
               <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-hacker-green flex-shrink-0" />
                 <div>
-                  <span className="text-sm font-semibold text-ice block">Lobby Handshake Protocol</span>
-                  <span className="text-xs text-ice/50 font-mono">Signed payload validated on /r/lobby</span>
+                  <span className="text-xs font-bold text-white block">Technocore Protocol Handshake</span>
+                  <span className="text-[11px] text-hacker-muted">Decentralized agent communications active</span>
                 </div>
               </div>
-              <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg">ACTIVE</span>
+              <span className="text-[10px] font-bold text-hacker-green bg-hacker-green/10 px-2 py-0.5 rounded">ONLINE</span>
             </div>
 
-            {/* Check 3: Snapshot Ready */}
-            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-void/60 border border-navy-600/60">
+            {/* Check 3: Airdrop Snapshot */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-black border border-hacker-border">
               <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-hacker-green flex-shrink-0" />
                 <div>
-                  <span className="text-sm font-semibold text-ice block">Flop Labs $FLOP Airdrop Readiness</span>
-                  <span className="text-xs text-ice/50 font-mono">DID key is eligible for Q4 2026 snapshot claims</span>
+                  <span className="text-xs font-bold text-white block">Flop Labs $FLOP Snapshot Ready</span>
+                  <span className="text-[11px] text-hacker-muted">Eligible for Q4 2026 decentralized agent claims</span>
                 </div>
               </div>
-              <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg">QUALIFIED</span>
+              <span className="text-[10px] font-bold text-hacker-green bg-hacker-green/10 px-2 py-0.5 rounded">QUALIFIED</span>
             </div>
           </div>
         </div>

@@ -3,68 +3,113 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --void: #00070A;
-    --cy: #00B4D8;
-    --cy-glow: #5FEBFF;
+  body {
+    background-color: #000000;
+    color: #FFFFFF;
+    font-family: 'IBM Plex Mono', monospace;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 60%),
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 100% 100%, 32px 32px, 32px 32px;
   }
 }
 
-body {
-  background-color: #00070A;
-  background-image: 
-    radial-gradient(circle at 15% 15%, rgba(0, 180, 216, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 85% 85%, rgba(0, 119, 160, 0.06) 0%, transparent 40%),
-    linear-gradient(rgba(0, 180, 216, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 180, 216, 0.03) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
-  color: #F5F7FA;
+/* Hacker Terminal Panels */
+.hacker-panel {
+  background: #09090b;
+  border: 1px solid #27272a;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* Cyberpunk Glow and Glassmorphism */
-.glass-panel {
-  background: linear-gradient(135deg, rgba(4, 20, 28, 0.85), rgba(7, 34, 48, 0.65));
-  border: 1px solid rgba(0, 180, 216, 0.22);
-  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px);
+.hacker-panel-glow {
+  background: #09090b;
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 25px -5px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.glass-panel-glow {
-  background: linear-gradient(135deg, rgba(4, 20, 28, 0.95), rgba(7, 34, 48, 0.85));
-  border: 1px solid rgba(95, 235, 255, 0.4);
-  box-shadow: 0 0 35px -10px rgba(0, 180, 216, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(20px);
+.hacker-panel-green {
+  background: #09090b;
+  border: 1px solid #00FF66;
+  box-shadow: 0 0 25px -5px rgba(0, 255, 102, 0.25), inset 0 1px 0 rgba(0, 255, 102, 0.1);
 }
 
-.btn-cyan {
-  background: linear-gradient(120deg, #5FEBFF, #00B4D8 55%, #0077A0);
-  color: #00070A;
+/* High-Contrast B&W Buttons */
+.btn-white {
+  background: #FFFFFF;
+  color: #000000;
   font-weight: 700;
-  box-shadow: 0 10px 30px -10px rgba(0, 180, 216, 0.8);
-  transition: all 0.25s cubic-bezier(0.22, 0.68, 0.24, 1);
+  border: 1px solid #FFFFFF;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.btn-cyan:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 40px -10px rgba(95, 235, 255, 1);
+.btn-white:hover {
+  background: #000000;
+  color: #FFFFFF;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+  border-color: #FFFFFF;
 }
 
-.btn-cyan:active {
-  transform: translateY(0px) scale(0.98);
+.btn-green {
+  background: #00FF66;
+  color: #000000;
+  font-weight: 700;
+  border: 1px solid #00FF66;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Custom Scrollbar */
+.btn-green:hover {
+  background: #000000;
+  color: #00FF66;
+  box-shadow: 0 0 20px rgba(0, 255, 102, 0.5);
+  border-color: #00FF66;
+}
+
+.btn-outline {
+  background: transparent;
+  color: #FFFFFF;
+  border: 1px solid #27272a;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-outline:hover {
+  border-color: #71717a;
+  background: #18181b;
+}
+
+/* Hacker Scanlines Overlay */
+.scanlines {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.03)
+  );
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+}
+
+/* Monospace selection */
+::selection {
+  background: #FFFFFF;
+  color: #000000;
+}
+
+/* Minimalist Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #00070A;
+  background: #000000;
 }
 ::-webkit-scrollbar-thumb {
-  background: #10394A;
-  border-radius: 4px;
+  background: #27272a;
+  border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #00B4D8;
+  background: #71717a;
 }

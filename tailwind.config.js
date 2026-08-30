@@ -7,38 +7,32 @@ export default {
   theme: {
     extend: {
       colors: {
-        void: "#00070A",
-        navy: {
-          900: "#04141C",
-          800: "#072230",
-          700: "#0A2E3E",
-          600: "#10394A",
-        },
-        flop: {
-          DEFAULT: "#00B4D8",
-          glow: "#5FEBFF",
-          dark: "#0077A0",
-          deep: "#003A4E",
-        },
-        ice: "#F5F7FA"
+        hacker: {
+          bg: "#000000",
+          card: "#09090b",
+          border: "#27272a",
+          borderHover: "#52525b",
+          text: "#ffffff",
+          dim: "#a1a1aa",
+          muted: "#71717a",
+          green: "#00FF66",
+          greenGlow: "#39ff14",
+          cyan: "#00F0FF"
+        }
       },
       fontFamily: {
-        mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-        display: ['"Outfit"', 'system-ui', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'Menlo', 'Courier', 'monospace'],
+        display: ['"Outfit"', '"IBM Plex Mono"', 'system-ui', 'sans-serif'],
       },
       animation: {
-        'pulse-glow': 'pulseGlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'spin-slow': 'spin 12s linear infinite',
-        'float': 'float 6s ease-in-out infinite',
+        'matrix-scan': 'scanline 8s linear infinite',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'glitch': 'glitch 1s linear infinite',
       },
       keyframes: {
-        pulseGlow: {
-          '0%, 100%': { opacity: '1', filter: 'drop-shadow(0 0 15px rgba(0, 180, 216, 0.6))' },
-          '50%': { opacity: '0.6', filter: 'drop-shadow(0 0 5px rgba(0, 180, 216, 0.2))' },
-        },
-        float: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-10px)' },
+        scanline: {
+          '0%': { transform: 'translateY(-100%)' },
+          '100%': { transform: 'translateY(1000%)' }
         }
       }
     },

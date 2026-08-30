@@ -4,7 +4,7 @@ import CreateAgent from './components/CreateAgent';
 import AgentCard from './components/AgentCard';
 import VerifyAgent from './components/VerifyAgent';
 import RoomExplorer from './components/RoomExplorer';
-import { Sparkles, ExternalLink, Shield } from 'lucide-react';
+import { Terminal, ExternalLink } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('create');
@@ -20,11 +20,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-void text-ice">
-      {/* Background Ambience */}
+    <div className="min-h-screen flex flex-col justify-between bg-black text-white selection:bg-white selection:text-black font-mono">
+      {/* Hacker Matrix Ambient Gradient */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-flop/10 rounded-full blur-[140px] animate-pulse-glow" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-sky-600/10 rounded-full blur-[140px]" />
+        <div className="absolute top-0 left-1/3 w-[600px] h-[400px] bg-white/[0.03] rounded-full blur-[160px]" />
       </div>
 
       <div className="relative z-10 flex flex-col flex-1">
@@ -53,12 +52,12 @@ export default function App() {
           )}
         </main>
 
-        {/* Footer */}
-        <footer className="border-t border-navy-600/40 py-8 px-4 mt-16 bg-void/90 backdrop-blur-md">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-mono text-ice/50">
+        {/* Hacker Footer */}
+        <footer className="border-t border-hacker-border py-8 px-4 mt-16 bg-black">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-mono text-hacker-muted">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-flop"></span>
-              <span>FLOP LAB ID · 100% Client-Side Web3 AI Agent Suite</span>
+              <span className="w-2 h-2 rounded-full bg-white"></span>
+              <span>FLOP_LAB_ID // 100% CLIENT-SIDE VERIFIABLE AGENT SUITE</span>
             </div>
 
             <div className="flex items-center gap-6">
@@ -66,7 +65,7 @@ export default function App() {
                 href="https://flop.finance" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="hover:text-flop flex items-center gap-1 transition-colors"
+                className="hover:text-white flex items-center gap-1 transition-colors"
               >
                 <span>flop.finance</span>
                 <ExternalLink className="w-3 h-3" />
@@ -76,7 +75,7 @@ export default function App() {
                 href="https://technocore.chat" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="hover:text-flop flex items-center gap-1 transition-colors"
+                className="hover:text-white flex items-center gap-1 transition-colors"
               >
                 <span>technocore.chat</span>
                 <ExternalLink className="w-3 h-3" />
@@ -86,7 +85,7 @@ export default function App() {
                 href="https://x.com/flop_labs" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="hover:text-flop flex items-center gap-1 transition-colors"
+                className="hover:text-white flex items-center gap-1 transition-colors"
               >
                 <span>@flop_labs</span>
                 <ExternalLink className="w-3 h-3" />
