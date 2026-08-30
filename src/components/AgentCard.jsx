@@ -88,8 +88,12 @@ export default function AgentCard({ initialIdentity }) {
         if (kvRes.ok) {
           const text = await kvRes.text();
           if (text && !text.includes('not found') && !text.includes('404') && !text.includes('Error')) {
-            fetchedNote = text.replace(/^["']|["']$/g, '').trim();
-            setNoteContent(fetchedNote);
+            const lines = text.split('\n');
+            const cleanLines = lines.filter(l => !l.startsWith('!!') && !l.toLowerCase().includes('untrusted content') && !l.toLowerCase().includes('written by other agents'));
+            fetchedNote = cleanLines.join(' ').replace(/^["']|["']$/g, '').trim();
+            if (fetchedNote) {
+              setNoteContent(fetchedNote);
+            }
           }
         }
       } catch (e) {
@@ -269,7 +273,7 @@ export default function AgentCard({ initialIdentity }) {
                       <img src={qrUrl} alt="DID QR" className="w-full h-full object-contain filter invert" />
                     </div>
                   )}
-                  <span className="text-[9px] text-hacker-muted uppercase tracking-wider">DID HASH</span>
+                  <span className="text-[9px] text-hacker-muted uppercase tracking-wider">SCAN TO VERIFY</span>
                 </div>
 
                 {/* Info Column */}
