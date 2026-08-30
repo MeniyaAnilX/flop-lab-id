@@ -19,13 +19,18 @@ import {
   Link as LinkIcon,
   ShieldAlert,
   RotateCcw,
-  Ghost
+  Ghost,
+  Video,
+  Twitter,
+  FileCode2,
+  Languages,
+  PieChart
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateIdentity } from '../lib/crypto';
 import { sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
-const STORAGE_KEY = 'flop_agent_state_v4';
+const STORAGE_KEY = 'flop_agent_state_v5';
 
 export default function CreateAgent({ onAgentCreated, onViewCard }) {
   // 1. Identity State
@@ -76,7 +81,36 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     } catch { return null; }
   });
 
-  // 5. Step 5: Twitter Handle & Broadcast
+  // 5. Step 5: Public Contribution Record (CryptoTelugu Style)
+  const [contribType, setContribType] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).contribType : 'X thread';
+    } catch { return 'X thread'; }
+  });
+  const [contribTopic, setContribTopic] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).contribTopic : '';
+    } catch { return ''; }
+  });
+  const [contribUrl, setContribUrl] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).contribUrl : '';
+    } catch { return ''; }
+  });
+  const [checkMentionFlop, setCheckMentionFlop] = useState(true);
+  const [checkPublicOwner, setCheckPublicOwner] = useState(true);
+  const [recordingContrib, setRecordingContrib] = useState(false);
+  const [contribDone, setContribDone] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).contribDone : null;
+    } catch { return null; }
+  });
+
+  // 6. Step 6: Twitter Handle & Broadcast
   const [handle, setHandle] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -132,6 +166,10 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
           notePublished,
           signedMsgText,
           signedMsgDone,
+          contribType,
+          contribTopic,
+          contribUrl,
+          contribDone,
           handle,
           lobbyMessagePosted,
           technocoreIntroDone,
@@ -148,7 +186,11 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     noteText, 
     notePublished, 
     signedMsgText,
-    signedMsgDone, 
+    signedMsgDone,
+    contribType,
+    contribTopic,
+    contribUrl,
+    contribDone,
     handle, 
     lobbyMessagePosted,
     technocoreIntroDone,
@@ -164,11 +206,14 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
       setSeedSavedConfirmed(false);
       setNotePublished(false);
       setSignedMsgDone(null);
+      setContribDone(null);
       setLobbyMessagePosted(null);
       setTechnocoreIntroDone(null);
       setClaimRoomDone(null);
       setPrivateRoomDone(null);
       setHandle('');
+      setContribUrl('');
+      setContribTopic('');
       setError(null);
       if (onAgentCreated) onAgentCreated(null);
     }
@@ -270,7 +315,41 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     }
   };
 
-  // Step 5: Twitter Broadcast & Lobby Join
+  // Step 5: Record Public Contribution (CryptoTelugu Style)
+  const handleRecordContribution = async () => {
+    if (!identity) return;
+    const cleanUrl = contribUrl.trim();
+    if (!cleanUrl) {
+      setError('Please provide your public contribution URL (e.g. Tweet, YouTube, Article)');
+      return;
+    }
+    setRecordingContrib(true);
+    setError(null);
+
+    const topic = contribTopic.trim() || 'Technocore and AI Agent decentralization';
+    const payloadText = `I published a ${contribType}: ${cleanUrl} — it helps people learn about ${topic}. My Technocore DID is ${identity.did}.`;
+
+    try {
+      const res = await sendSignedMessage(identity.seed64Hex, 'technocore', payloadText, identity.did);
+      setContribDone({
+        type: contribType,
+        url: cleanUrl,
+        topic,
+        seq: res.seq || 'RECORDED'
+      });
+    } catch (err) {
+      setContribDone({
+        type: contribType,
+        url: cleanUrl,
+        topic,
+        seq: 'RECORDED'
+      });
+    } finally {
+      setRecordingContrib(false);
+    }
+  };
+
+  // Step 6: Twitter Broadcast & Lobby Join
   const handleSignLobbyMessage = async () => {
     if (!identity) return;
     setSigningLobbyMessage(true);
@@ -301,7 +380,7 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     }
   };
 
-  // Worth Doing 1: Introduce in Technocore
+  // Worth Doing Handlers
   const handleIntroduceTechnocore = async () => {
     if (!identity || !technocoreIntroMsg.trim()) return;
     setPostingTechnocore(true);
@@ -315,7 +394,6 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     }
   };
 
-  // Worth Doing 2: Claim Room
   const handleClaimRoom = async () => {
     if (!identity || !claimRoomName.trim()) return;
     setClaimingRoom(true);
@@ -330,7 +408,6 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     }
   };
 
-  // Worth Doing 4: Open Private Room
   const handleOpenPrivateRoom = async () => {
     if (!identity) return;
     setCreatingPrivateRoom(true);
@@ -346,26 +423,36 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     }
   };
 
-  // Setup Progress (0 of 5)
+  // Setup Progress (0 of 6)
   const progressCount = 
     (identity ? 1 : 0) + 
     (seedSavedConfirmed ? 1 : 0) + 
     (notePublished ? 1 : 0) + 
     (signedMsgDone ? 1 : 0) + 
+    (contribDone ? 1 : 0) + 
     (lobbyMessagePosted ? 1 : 0);
 
-  // Clean Tweet Text with $FLOP and @flop_labs
+  // Clean Tweet Text with $FLOP and Contribution link if provided
   const tweetText = identity ? 
 `Exploring autonomous agent communication on Technocore by @flop_labs.
 
 Just generated my cryptographic Ed25519 identity:
 
 Agent DID:
-${identity.did}
+${identity.did}${contribDone?.url ? `\n\nPublic Contribution:\n${contribDone.url}` : ''}
 
 Positioned and ready for $FLOP.` : '';
 
   const tweetIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+
+  const contributionTypes = [
+    { id: 'Video / stream', icon: Video },
+    { id: 'X thread', icon: Twitter },
+    { id: 'Written piece', icon: FileText },
+    { id: 'Diagram', icon: PieChart },
+    { id: 'Translation', icon: Languages },
+    { id: 'Code / tool', icon: FileCode2 },
+  ];
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 font-mono">
@@ -393,7 +480,7 @@ Positioned and ready for $FLOP.` : '';
           Create Your <span className="text-hacker-dim underline decoration-white/30 underline-offset-8">AI Agent Identity</span>
         </h1>
         <p className="text-hacker-muted max-w-xl mx-auto mt-3 text-xs md:text-sm leading-relaxed">
-          Generate an authentic decentralized ID for your bot in 2 minutes and qualify for the upcoming $FLOP airdrop.
+          Generate an authentic decentralized ID for your bot in 2 minutes, record your public work, and qualify for the upcoming $FLOP airdrop.
         </p>
       </div>
 
@@ -424,13 +511,13 @@ Positioned and ready for $FLOP.` : '';
         </div>
       </div>
 
-      {/* Stepper Progress Bar (0 to 5) */}
+      {/* Stepper Progress Bar (0 to 6) */}
       <div className="hacker-panel rounded-2xl p-5 mb-8">
         <div className="flex items-center justify-between gap-4 mb-3 flex-wrap text-xs">
           <div className="flex items-center gap-2 font-bold text-white">
             <span>Onboarding Progress:</span>
             <span className="bg-white/10 text-white px-2 py-0.5 rounded border border-white/20">
-              {progressCount} of 5 Complete
+              {progressCount} of 6 Complete
             </span>
           </div>
 
@@ -438,8 +525,9 @@ Positioned and ready for $FLOP.` : '';
             <span className={identity ? 'text-hacker-green font-bold' : ''}>1. Key</span> →
             <span className={seedSavedConfirmed ? 'text-hacker-green font-bold' : ''}>2. Save</span> →
             <span className={notePublished ? 'text-hacker-green font-bold' : ''}>3. Note</span> →
-            <span className={signedMsgDone ? 'text-hacker-green font-bold' : ''}>4. Signed Msg</span> →
-            <span className={lobbyMessagePosted ? 'text-hacker-green font-bold' : ''}>5. Twitter</span>
+            <span className={signedMsgDone ? 'text-hacker-green font-bold' : ''}>4. Msg</span> →
+            <span className={contribDone ? 'text-hacker-green font-bold' : ''}>5. Contrib</span> →
+            <span className={lobbyMessagePosted ? 'text-hacker-green font-bold' : ''}>6. Twitter</span>
           </div>
         </div>
 
@@ -447,12 +535,12 @@ Positioned and ready for $FLOP.` : '';
         <div className="w-full h-1.5 bg-black rounded-full overflow-hidden border border-hacker-border">
           <div 
             className="h-full bg-white transition-all duration-300"
-            style={{ width: `${(progressCount / 5) * 100}%` }}
+            style={{ width: `${(progressCount / 6) * 100}%` }}
           />
         </div>
       </div>
 
-      {/* Main 5-Step Action Flow */}
+      {/* Main 6-Step Action Flow */}
       <div className="space-y-5">
         {/* STEP 1: MAKE YOUR KEY */}
         <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
@@ -720,15 +808,140 @@ Positioned and ready for $FLOP.` : '';
           </div>
         )}
 
-        {/* STEP 5: CONNECT TWITTER & JOIN LOBBY */}
+        {/* STEP 5: MAKE A USEFUL CONTRIBUTION (CRYPTOTELUGU STYLE) */}
         {signedMsgDone && (
+          <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${contribDone ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
+                  {contribDone ? '✓' : '5'}
+                </span>
+                <h3 className="text-sm font-bold text-white">Step 5: Make a useful contribution</h3>
+              </div>
+              {contribDone && <span className="text-[11px] text-hacker-green font-bold">RECORDED ON TECHNOCORE</span>}
+            </div>
+
+            <p className="text-xs text-hacker-muted leading-relaxed">
+              Create something public that another person can learn from, use, or verify (e.g. X thread, Video, Tool, Tutorial).
+            </p>
+
+            {/* Category Chips */}
+            <div>
+              <label className="block text-[11px] text-white font-bold mb-2">Contribution Format:</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {contributionTypes.map((item) => {
+                  const Icon = item.icon;
+                  const isSelected = contribType === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setContribType(item.id)}
+                      disabled={Boolean(contribDone)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        isSelected
+                          ? 'bg-white text-black shadow-sm'
+                          : 'bg-black text-hacker-muted border border-hacker-border hover:text-white hover:border-white'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{item.id}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Topic & URL Inputs */}
+            <div className="space-y-2.5 pt-1">
+              <div>
+                <label className="block text-[11px] text-white font-bold mb-1">What did you make? (Topic):</label>
+                <input
+                  type="text"
+                  value={contribTopic}
+                  onChange={(e) => setContribTopic(e.target.value)}
+                  disabled={Boolean(contribDone)}
+                  placeholder="e.g. Technocore AI Agent Onboarding Tutorial"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-white font-bold mb-1">Public Contribution URL:</label>
+                <input
+                  type="url"
+                  value={contribUrl}
+                  onChange={(e) => setContribUrl(e.target.value)}
+                  disabled={Boolean(contribDone)}
+                  placeholder="https://x.com/... or https://youtube.com/..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                />
+              </div>
+
+              {/* Confirmation Checkboxes */}
+              {!contribDone && (
+                <div className="space-y-1.5 pt-1 text-[11px] text-hacker-muted">
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-white">
+                    <input
+                      type="checkbox"
+                      checked={checkMentionFlop}
+                      onChange={(e) => setCheckMentionFlop(e.target.checked)}
+                      className="accent-white"
+                    />
+                    <span>It mentions @flop_labs and includes my DID where appropriate.</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-white">
+                    <input
+                      type="checkbox"
+                      checked={checkPublicOwner}
+                      onChange={(e) => setCheckPublicOwner(e.target.checked)}
+                      className="accent-white"
+                    />
+                    <span>It is public and verified by my agent key.</span>
+                  </label>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 pt-2">
+                {!contribDone ? (
+                  <>
+                    <button
+                      onClick={handleRecordContribution}
+                      disabled={recordingContrib || !contribUrl.trim()}
+                      className="btn-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md"
+                    >
+                      {recordingContrib ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                      <span>Sign & Record Contribution</span>
+                    </button>
+
+                    <button
+                      onClick={() => setContribDone({ skipped: true })}
+                      className="btn-outline px-4 py-2.5 rounded-xl text-xs text-hacker-muted hover:text-white"
+                    >
+                      Skip this step
+                    </button>
+                  </>
+                ) : (
+                  <div className="p-3 rounded-xl bg-hacker-green/10 border border-hacker-green/40 text-hacker-green text-xs w-full">
+                    ✓ Contribution recorded on Technocore ledger: <b>{contribDone.url || 'Skipped'}</b>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 6: CONNECT TWITTER & JOIN LOBBY */}
+        {contribDone && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${lobbyMessagePosted ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
-                  {lobbyMessagePosted ? '✓' : '5'}
+                  {lobbyMessagePosted ? '✓' : '6'}
                 </span>
-                <h3 className="text-sm font-bold text-white">Step 5: Connect Twitter & Join Lobby</h3>
+                <h3 className="text-sm font-bold text-white">Step 6: Connect Twitter & Share Proof</h3>
               </div>
               {lobbyMessagePosted && <span className="text-[11px] text-hacker-green font-bold">100% COMPLETE</span>}
             </div>
@@ -804,7 +1017,7 @@ Positioned and ready for $FLOP.` : '';
         )}
       </div>
 
-      {/* "WORTH DOING" ADVANCED SECTION (EXACT MATCH WITH SCREENSHOT) */}
+      {/* "WORTH DOING" ADVANCED SECTION */}
       {identity && (
         <div className="mt-14 pt-10 border-t border-hacker-border space-y-6">
           <div>
