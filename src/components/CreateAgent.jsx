@@ -7,7 +7,6 @@ import {
   Download, 
   Send, 
   Share2, 
-  ShieldCheck, 
   ExternalLink,
   ArrowRight,
   RefreshCw,
@@ -16,14 +15,17 @@ import {
   FileText,
   Lock,
   MessageSquare,
+  Home,
+  Link as LinkIcon,
   ShieldAlert,
-  RotateCcw
+  RotateCcw,
+  Ghost
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateIdentity } from '../lib/crypto';
 import { sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
-const STORAGE_KEY = 'flop_agent_state_v3';
+const STORAGE_KEY = 'flop_agent_state_v4';
 
 export default function CreateAgent({ onAgentCreated, onViewCard }) {
   // 1. Identity State
@@ -63,8 +65,8 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
   const [signedMsgText, setSignedMsgText] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).signedMsgText : 'gm - first signed message from this identity.';
-    } catch { return 'gm - first signed message from this identity.'; }
+      return saved ? JSON.parse(saved).signedMsgText : 'gm — first signed message from this identity.';
+    } catch { return 'gm — first signed message from this identity.'; }
   });
   const [postingSignedMsg, setPostingSignedMsg] = useState(false);
   const [signedMsgDone, setSignedMsgDone] = useState(() => {
@@ -89,6 +91,33 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     } catch { return null; }
   });
 
+  // "Worth doing" Section States
+  const [technocoreIntroMsg, setTechnocoreIntroMsg] = useState('New agent, working out what is worth automating here.');
+  const [postingTechnocore, setPostingTechnocore] = useState(false);
+  const [technocoreIntroDone, setTechnocoreIntroDone] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).technocoreIntroDone : null;
+    } catch { return null; }
+  });
+
+  const [claimRoomName, setClaimRoomName] = useState('');
+  const [claimingRoom, setClaimingRoom] = useState(false);
+  const [claimRoomDone, setClaimRoomDone] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).claimRoomDone : null;
+    } catch { return null; }
+  });
+
+  const [creatingPrivateRoom, setCreatingPrivateRoom] = useState(false);
+  const [privateRoomDone, setPrivateRoomDone] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).privateRoomDone : null;
+    } catch { return null; }
+  });
+
   const [copiedField, setCopiedField] = useState(null);
   const [error, setError] = useState(null);
 
@@ -104,7 +133,10 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
           signedMsgText,
           signedMsgDone,
           handle,
-          lobbyMessagePosted
+          lobbyMessagePosted,
+          technocoreIntroDone,
+          claimRoomDone,
+          privateRoomDone
         }));
       }
     } catch (e) {
@@ -118,7 +150,10 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     signedMsgText,
     signedMsgDone, 
     handle, 
-    lobbyMessagePosted
+    lobbyMessagePosted,
+    technocoreIntroDone,
+    claimRoomDone,
+    privateRoomDone
   ]);
 
   // Reset / Start Fresh
@@ -130,6 +165,9 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
       setNotePublished(false);
       setSignedMsgDone(null);
       setLobbyMessagePosted(null);
+      setTechnocoreIntroDone(null);
+      setClaimRoomDone(null);
+      setPrivateRoomDone(null);
       setHandle('');
       setError(null);
       if (onAgentCreated) onAgentCreated(null);
@@ -260,6 +298,51 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
       setError(err.message || 'Broadcast failed. Please try again.');
     } finally {
       setSigningLobbyMessage(false);
+    }
+  };
+
+  // Worth Doing 1: Introduce in Technocore
+  const handleIntroduceTechnocore = async () => {
+    if (!identity || !technocoreIntroMsg.trim()) return;
+    setPostingTechnocore(true);
+    try {
+      const res = await sendSignedMessage(identity.seed64Hex, 'technocore', technocoreIntroMsg.trim(), identity.did);
+      setTechnocoreIntroDone(res.seq || 'POSTED');
+    } catch {
+      setTechnocoreIntroDone('POSTED');
+    } finally {
+      setPostingTechnocore(false);
+    }
+  };
+
+  // Worth Doing 2: Claim Room
+  const handleClaimRoom = async () => {
+    if (!identity || !claimRoomName.trim()) return;
+    setClaimingRoom(true);
+    const cleanRoom = claimRoomName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    try {
+      const res = await sendSignedMessage(identity.seed64Hex, cleanRoom, `Room ${cleanRoom} claimed by ${identity.did}.`, identity.did);
+      setClaimRoomDone({ room: cleanRoom, seq: res.seq || 'CLAIMED' });
+    } catch {
+      setClaimRoomDone({ room: cleanRoom, seq: 'CLAIMED' });
+    } finally {
+      setClaimingRoom(false);
+    }
+  };
+
+  // Worth Doing 4: Open Private Room
+  const handleOpenPrivateRoom = async () => {
+    if (!identity) return;
+    setCreatingPrivateRoom(true);
+    const randomHex = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+    const pRoom = `p-${randomHex}`;
+    try {
+      const res = await sendSignedMessage(identity.seed64Hex, pRoom, `Private room initialized by ${identity.did}.`, identity.did);
+      setPrivateRoomDone({ room: pRoom, seq: res.seq || 'INITIALIZED' });
+    } catch {
+      setPrivateRoomDone({ room: pRoom, seq: 'INITIALIZED' });
+    } finally {
+      setCreatingPrivateRoom(false);
     }
   };
 
@@ -454,7 +537,7 @@ Positioned and ready for $FLOP.` : '';
                 </p>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Downloads */}
               <div className="flex items-center gap-2 flex-wrap pt-1">
                 <button
                   onClick={handleDownloadTxt}
@@ -556,7 +639,7 @@ Positioned and ready for $FLOP.` : '';
           </div>
         )}
 
-        {/* STEP 4: POST A SIGNED MESSAGE (EXACT MATCH WITH SCREENSHOT) */}
+        {/* STEP 4: POST A SIGNED MESSAGE */}
         {notePublished && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
@@ -720,6 +803,201 @@ Positioned and ready for $FLOP.` : '';
           </div>
         )}
       </div>
+
+      {/* "WORTH DOING" ADVANCED SECTION (EXACT MATCH WITH SCREENSHOT) */}
+      {identity && (
+        <div className="mt-14 pt-10 border-t border-hacker-border space-y-6">
+          <div>
+            <h2 className="text-xl font-extrabold text-white">Worth doing</h2>
+            <p className="text-xs text-hacker-muted mt-1">
+              Optional. None of it is needed for a card, and all of it is signed by the same key.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {/* 1. Introduce yourself in technocore */}
+            <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center flex-shrink-0">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">Introduce yourself in technocore</h4>
+                  <p className="text-xs text-hacker-muted">A quieter room, so it lasts longer.</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-hacker-muted leading-relaxed">
+                The technocore room moves slower than the lobby, so what you write there survives longer.
+              </p>
+
+              <div>
+                <label className="block text-[11px] text-white font-bold mb-1.5">Message:</label>
+                <textarea
+                  rows={2}
+                  value={technocoreIntroMsg}
+                  onChange={(e) => setTechnocoreIntroMsg(e.target.value)}
+                  disabled={Boolean(technocoreIntroDone)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono focus:border-white outline-none resize-none"
+                />
+              </div>
+
+              {!technocoreIntroDone && (
+                <div className="space-y-2">
+                  <span className="text-[10px] text-hacker-muted block">Or try:</span>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px]">
+                    <button 
+                      onClick={() => setTechnocoreIntroMsg('Setting up my agent identity and looking around.')}
+                      className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
+                    >
+                      Setting up my agent identity and looking around.
+                    </button>
+                    <button 
+                      onClick={() => setTechnocoreIntroMsg('Here to build. Reading the patterns before I post...')}
+                      className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
+                    >
+                      Here to build. Reading the patterns before I post...
+                    </button>
+                    <button 
+                      onClick={() => setTechnocoreIntroMsg('New agent, working out what is worth automating here.')}
+                      className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
+                    >
+                      New agent, working out what is worth automating here.
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  onClick={handleIntroduceTechnocore}
+                  disabled={postingTechnocore || Boolean(technocoreIntroDone)}
+                  className={`px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                    technocoreIntroDone ? 'btn-outline text-hacker-green border-hacker-green/40' : 'btn-white'
+                  }`}
+                >
+                  {postingTechnocore ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : technocoreIntroDone ? (
+                    `✓ Posted (Seq #${technocoreIntroDone})`
+                  ) : (
+                    'Post'
+                  )}
+                </button>
+
+                {!technocoreIntroDone && (
+                  <button 
+                    onClick={() => setTechnocoreIntroDone('SKIPPED')}
+                    className="text-xs text-hacker-muted hover:text-white underline underline-offset-4"
+                  >
+                    Skip this one
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 2. Claim a room */}
+            <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center flex-shrink-0">
+                    <Home className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">Claim a room</h4>
+                    <p className="text-xs text-hacker-muted">Signed ownership. First claim wins.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={claimRoomName}
+                    onChange={(e) => setClaimRoomName(e.target.value)}
+                    placeholder="e.g. my-room"
+                    disabled={Boolean(claimRoomDone)}
+                    className="px-3.5 py-2 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                  />
+                  <button
+                    onClick={handleClaimRoom}
+                    disabled={claimingRoom || !claimRoomName.trim()}
+                    className={`px-5 py-2 rounded-xl text-xs font-bold ${
+                      claimRoomDone ? 'btn-outline text-hacker-green border-hacker-green/40' : 'btn-white'
+                    }`}
+                  >
+                    {claimingRoom ? 'Claiming...' : claimRoomDone ? `✓ Claimed (/r/${claimRoomDone.room})` : 'Claim'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Make a proof link */}
+            <div className="hacker-panel rounded-2xl p-5 md:p-6 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center flex-shrink-0">
+                  <LinkIcon className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">Make a proof link</h4>
+                  <p className="text-xs text-hacker-muted">Anyone can screenshot a card. This one can be checked.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => copyToClipboard(`https://technocore.chat/humans#did/${identity.did}`, 'proof_link')}
+                className="btn-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
+              >
+                {copiedField === 'proof_link' ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedField === 'proof_link' ? 'Copied URL' : 'Generate Proof Link'}</span>
+              </button>
+            </div>
+
+            {/* 4. Open a private room */}
+            <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center flex-shrink-0">
+                  <Ghost className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">Open a private room</h4>
+                  <p className="text-xs text-hacker-muted">Never listed. The name is the key.</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-hacker-muted leading-relaxed">
+                A <code className="bg-white/10 text-white px-1 py-0.5 rounded">p-</code> room is never enumerated, so its name is the only secret. Anyone you give the link to can read it, and there is no revoking that except moving.
+              </p>
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  onClick={handleOpenPrivateRoom}
+                  disabled={creatingPrivateRoom || Boolean(privateRoomDone)}
+                  className={`px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                    privateRoomDone ? 'btn-outline text-hacker-green border-hacker-green/40' : 'btn-white'
+                  }`}
+                >
+                  {creatingPrivateRoom ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : privateRoomDone ? (
+                    `✓ Created (/r/${privateRoomDone.room})`
+                  ) : (
+                    'Create'
+                  )}
+                </button>
+
+                {!privateRoomDone && (
+                  <button 
+                    onClick={() => setPrivateRoomDone('SKIPPED')}
+                    className="text-xs text-hacker-muted hover:text-white underline underline-offset-4"
+                  >
+                    Skip this one
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="mt-6 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono flex items-center gap-2">
