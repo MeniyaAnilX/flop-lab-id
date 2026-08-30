@@ -21,6 +21,12 @@ class ErrorBoundary extends Component {
     console.error('FlopLab Runtime Error caught by Boundary:', error, errorInfo);
   }
 
+  componentDidUpdate(prevProps) {
+    if (prevProps.tabKey !== this.props.tabKey && this.state.hasError) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -72,7 +78,7 @@ export default function App() {
   };
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary tabKey={activeTab}>
       <div className="min-h-screen flex flex-col justify-between bg-black text-white selection:bg-white selection:text-black font-mono">
       {/* Hacker Matrix Ambient Gradient */}
       <div className="fixed inset-0 pointer-events-none z-0">
