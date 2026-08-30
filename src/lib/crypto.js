@@ -118,10 +118,21 @@ export function normalizeText(text) {
 /**
  * Signs a payload with an Ed25519 private key
  */
-export function signPayload(privateKeyBytes, room, nonce, text) {
+export function signPayload(privateKeyInput, room, nonce, text) {
+  let privKeyBytes;
+  if (typeof privateKeyInput === 'string') {
+    privKeyBytes = hexToBytes(privateKeyInput.trim());
+  } else if (privateKeyInput instanceof Uint8Array) {
+    privKeyBytes = privateKeyInput;
+  } else if (privateKeyInput && typeof privateKeyInput === 'object') {
+    privKeyBytes = new Uint8Array(Object.values(privateKeyInput));
+  } else {
+    throw new Error('Invalid private key format');
+  }
+
   const normalized = normalizeText(text);
   const rawPayload = utf8ToBytes(`${room}|${nonce}|${normalized}`);
-  const signature = ed25519.sign(rawPayload, privateKeyBytes);
+  const signature = ed25519.sign(rawPayload, privKeyBytes);
   const sigBase64Url = base64UrlEncode(signature);
   return {
     normalized,
