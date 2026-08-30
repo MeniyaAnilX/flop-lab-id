@@ -22,7 +22,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
             <div className="flex items-center gap-1.5 font-bold text-lg tracking-tight text-white group-hover:text-hacker-green transition-colors">
               <span>FLOPLAB</span>
             </div>
-            <p className="text-[9px] text-hacker-muted uppercase tracking-widest -mt-0.5">// autonomous agent suite</p>
+            <p className="text-[9px] text-hacker-muted uppercase tracking-widest -mt-0.5">// autonomous agent id</p>
           </div>
         </div>
 

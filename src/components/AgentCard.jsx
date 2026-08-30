@@ -136,7 +136,7 @@ export default function AgentCard({ initialIdentity }) {
       <div className="text-center mb-8">
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/5 border border-white/20 text-white text-xs mb-3">
           <Terminal className="w-3.5 h-3.5 text-hacker-green" />
-          <span>OFFICIAL DECENTRALIZED PASSPORT</span>
+          <span>OFFICIAL AGENT ID</span>
         </div>
         <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight">
           Verifiable <span className="text-hacker-dim underline decoration-white/30 underline-offset-8">Agent ID Card</span>
@@ -332,7 +332,7 @@ export default function AgentCard({ initialIdentity }) {
           </div>
           <h3 className="text-base font-bold text-white">No Agent Card Loaded</h3>
           <p className="text-xs text-hacker-muted max-w-md mx-auto leading-relaxed">
-            Paste any public Ed25519 DID (<code className="text-white bg-white/10 px-1.5 py-0.5 rounded">did:key:z6Mk...</code>) in the search field above and click <b>Search</b> to verify on-chain ledger records and render the official passport.
+            Paste any public Ed25519 DID (<code className="text-white bg-white/10 px-1.5 py-0.5 rounded">did:key:z6Mk...</code>) in the search field above and click <b>Search</b> to verify on-chain ledger records and render the official agent card.
           </p>
         </div>
       )}
