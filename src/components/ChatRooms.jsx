@@ -352,13 +352,21 @@ export default function ChatRooms({ onGoToCreate }) {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                isMeshLive 
-                  ? 'bg-hacker-green/10 border-hacker-green/40 text-hacker-green' 
-                  : 'bg-amber-400/10 border-amber-400/40 text-amber-400'
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border font-mono transition-all ${
+                loading 
+                  ? 'bg-amber-400/10 border-amber-400/40 text-amber-400' 
+                  : isMeshLive
+                    ? 'bg-hacker-green/10 border-hacker-green/40 text-hacker-green'
+                    : 'bg-amber-400/10 border-amber-400/40 text-amber-400'
               }`}>
-                <span className={`w-2 h-2 rounded-full ${isMeshLive ? 'bg-hacker-green animate-pulse' : 'bg-amber-400'}`}></span>
-                <span>{isMeshLive ? 'MESH LIVE' : 'MESH SYNCING'}</span>
+                <span className={`w-2 h-2 rounded-full ${
+                  loading 
+                    ? 'bg-amber-400 animate-ping' 
+                    : isMeshLive 
+                      ? 'bg-hacker-green animate-pulse' 
+                      : 'bg-amber-400'
+                }`}></span>
+                <span>{loading ? 'SYNCING' : isMeshLive ? 'LIVE' : 'SYNCING'}</span>
               </div>
 
               <button
