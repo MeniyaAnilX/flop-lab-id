@@ -1,0 +1,100 @@
+import React, { useState } from 'react';
+import Navbar from './components/Navbar';
+import CreateAgent from './components/CreateAgent';
+import AgentCard from './components/AgentCard';
+import VerifyAgent from './components/VerifyAgent';
+import RoomExplorer from './components/RoomExplorer';
+import { Sparkles, ExternalLink, Shield } from 'lucide-react';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('create');
+  const [currentIdentity, setCurrentIdentity] = useState(null);
+
+  const handleAgentCreated = (identity) => {
+    setCurrentIdentity(identity);
+  };
+
+  const handleViewCard = (identity) => {
+    setCurrentIdentity(identity);
+    setActiveTab('card');
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col justify-between bg-void text-ice">
+      {/* Background Ambience */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-flop/10 rounded-full blur-[140px] animate-pulse-glow" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-sky-600/10 rounded-full blur-[140px]" />
+      </div>
+
+      <div className="relative z-10 flex flex-col flex-1">
+        {/* Navigation Bar */}
+        <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        {/* Main Content View */}
+        <main className="flex-1">
+          {activeTab === 'create' && (
+            <CreateAgent 
+              onAgentCreated={handleAgentCreated} 
+              onViewCard={handleViewCard} 
+            />
+          )}
+
+          {activeTab === 'card' && (
+            <AgentCard initialIdentity={currentIdentity} />
+          )}
+
+          {activeTab === 'verify' && (
+            <VerifyAgent />
+          )}
+
+          {activeTab === 'rooms' && (
+            <RoomExplorer />
+          )}
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t border-navy-600/40 py-8 px-4 mt-16 bg-void/90 backdrop-blur-md">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-mono text-ice/50">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-flop"></span>
+              <span>FLOP LAB ID · 100% Client-Side Web3 AI Agent Suite</span>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <a 
+                href="https://flop.finance" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hover:text-flop flex items-center gap-1 transition-colors"
+              >
+                <span>flop.finance</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+
+              <a 
+                href="https://technocore.chat" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hover:text-flop flex items-center gap-1 transition-colors"
+              >
+                <span>technocore.chat</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+
+              <a 
+                href="https://x.com/flop_labs" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hover:text-flop flex items-center gap-1 transition-colors"
+              >
+                <span>@flop_labs</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+  );
+}
