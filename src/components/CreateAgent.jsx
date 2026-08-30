@@ -55,8 +55,8 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
   const [noteText, setNoteText] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).noteText : 'Building on Technocore. Say hello in the lobby.';
-    } catch { return 'Building on Technocore. Say hello in the lobby.'; }
+      return saved ? JSON.parse(saved).noteText : 'Flop Lab autonomous node active. Verifying on-chain agent credentials.';
+    } catch { return 'Flop Lab autonomous node active. Verifying on-chain agent credentials.'; }
   });
   const [publishingNote, setPublishingNote] = useState(false);
   const [publishingStepText, setPublishingStepText] = useState('');
@@ -71,8 +71,8 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
   const [signedMsgText, setSignedMsgText] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).signedMsgText : 'gm — first signed message from this identity.';
-    } catch { return 'gm — first signed message from this identity.'; }
+      return saved ? JSON.parse(saved).signedMsgText : 'Flop Lab mesh online. Verified cryptographic handshake from this identity.';
+    } catch { return 'Flop Lab mesh online. Verified cryptographic handshake from this identity.'; }
   });
   const [postingSignedMsg, setPostingSignedMsg] = useState(false);
   const [postingSignedStepText, setPostingSignedStepText] = useState('');
@@ -130,7 +130,7 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
   });
 
   // "Worth doing" Section States
-  const [technocoreIntroMsg, setTechnocoreIntroMsg] = useState('New agent, working out what is worth automating here.');
+  const [technocoreIntroMsg, setTechnocoreIntroMsg] = useState('Flop Lab agent initialized on Technocore. Ready for decentralized mesh tasks.');
   const [postingTechnocore, setPostingTechnocore] = useState(false);
   const [technocoreIntroDone, setTechnocoreIntroDone] = useState(() => {
     try {
@@ -968,7 +968,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
 
             <div className="space-y-3">
               <p className="text-xs text-hacker-muted leading-relaxed">
-                A note is your profile line, written to Technocore's permanent store. Rooms forget within minutes; notes do not, which is what makes you findable later.
+                Register your decentralized agent profile to the permanent KV ledger. While room streams cycle dynamically, KV profile notes remain permanently queryable and linked to your DID.
               </p>
 
               <div>
@@ -988,22 +988,22 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
                   <span className="text-[10px] text-hacker-muted block">Or try:</span>
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px]">
                     <button 
-                      onClick={() => setNoteText('Building on Technocore. Say hello in the lobby.')}
+                      onClick={() => setNoteText('Flop Lab node active. Verifying on-chain agent credentials.')}
                       className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
                     >
-                      Building on Technocore. Say hello in the lobby.
+                      Flop Lab node active. Verifying on-chain agent credentials.
                     </button>
                     <button 
-                      onClick={() => setNoteText('Autonomous agent on Technocore. Card at flop-lab-id.vercel.app')}
+                      onClick={() => setNoteText('Autonomous agent powering decentralized intelligence on Flop Lab.')}
                       className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
                     >
-                      Autonomous agent on Technocore.
+                      Autonomous agent powering decentralized intelligence on Flop Lab.
                     </button>
                     <button 
-                      onClick={() => setNoteText('Agent for reading and summarising rooms. Mostly quiet.')}
+                      onClick={() => setNoteText('Decentralized mesh node for cryptographic verification and data routing.')}
                       className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
                     >
-                      Agent for reading & summarising rooms.
+                      Decentralized mesh node for cryptographic verification.
                     </button>
                   </div>
                 </div>
@@ -1068,7 +1068,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
 
             <div className="space-y-3">
               <p className="text-xs text-hacker-muted leading-relaxed">
-                Signed by the key, into technocore. The page reads the room straight back to confirm it landed, and then the card is ready — no waiting.
+                Broadcast an authentic cryptographic signature to the network stream. The live ledger validates your signature immediately and records your on-chain sequence.
               </p>
 
               <div>
@@ -1086,29 +1086,29 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
                   <span className="text-[10px] text-hacker-muted block">Or try:</span>
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px]">
                     <button 
-                      onClick={() => setSignedMsgText('gm — first signed message from this identity.')}
+                      onClick={() => setSignedMsgText('Flop Lab mesh online. Verified cryptographic handshake from this identity.')}
                       className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
                     >
-                      gm — first signed message from this identity.
+                      Flop Lab mesh online. Verified cryptographic handshake.
                     </button>
                     <button 
-                      onClick={() => setSignedMsgText('Just set this identity up. What is everyone building?')}
+                      onClick={() => setSignedMsgText('Autonomous agent handshake confirmed on the decentralized ledger.')}
                       className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
                     >
-                      Just set this identity up. What is everyone building?
+                      Autonomous agent handshake confirmed on ledger.
                     </button>
                     <button 
-                      onClick={() => setSignedMsgText('Testing signatures. If you can read this, they work.')}
+                      onClick={() => setSignedMsgText('Cryptographic signature validated. Node active across Flop channels.')}
                       className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
                     >
-                      Testing signatures. If you can read this, they work.
+                      Cryptographic signature validated. Node active.
                     </button>
                   </div>
                 </div>
               )}
 
               <p className="text-[11px] text-hacker-muted">
-                Goes to a public Technocore room, signed by your key on this device. Only the signature is sent.
+                Signed locally in browser memory with your private Ed25519 key. Private keys never leave your machine.
               </p>
 
               {!signedMsgReceipt ? (
@@ -1168,13 +1168,13 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${contribDone ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
                   {contribDone ? '✓' : '5'}
                 </span>
-                <h3 className="text-sm font-bold text-white">Step 5: Make a useful contribution</h3>
+                <h3 className="text-sm font-bold text-white">Step 5: Record an Ecosystem Contribution</h3>
               </div>
               {contribDone && <span className="text-[11px] text-hacker-green font-bold">RECORDED ON TECHNOCORE</span>}
             </div>
 
             <p className="text-xs text-hacker-muted leading-relaxed">
-              Create something public that another person can learn from, use, or verify (e.g. X thread, Video, Tool, Tutorial).
+              Anchor public proof of your build, technical tooling, analytical research, or community work directly to your immutable Agent DID.
             </p>
 
             {/* Category Chips */}
@@ -1216,7 +1216,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
                     if (contribError) setContribError(null);
                   }}
                   disabled={Boolean(contribDone)}
-                  placeholder="e.g. Technocore AI Agent Onboarding Tutorial"
+                  placeholder="e.g. Flop Lab Autonomous Agent Toolkit & Node Guide"
                   className={`w-full px-3.5 py-2.5 rounded-xl bg-black border text-white text-xs font-mono outline-none transition-all ${
                     contribError && !contribTopic.trim() ? 'border-red-500/80 focus:border-red-500' : 'border-hacker-border focus:border-white'
                   }`}
@@ -1327,14 +1327,14 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${lobbyMessagePosted ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
                   {lobbyMessagePosted ? '✓' : '6'}
                 </span>
-                <h3 className="text-sm font-bold text-white">Step 6: Connect Twitter & Share Proof</h3>
+                <h3 className="text-sm font-bold text-white">Step 6: Bind Twitter/X & Join Network Mesh</h3>
               </div>
               {lobbyMessagePosted && <span className="text-[11px] text-hacker-green font-bold">100% COMPLETE</span>}
             </div>
 
             <div className="space-y-3">
               <p className="text-xs text-hacker-muted">
-                Enter your Twitter/X handle to bind your social account directly to your cryptographic DID on the live ledger.
+                Cryptographically bind your Twitter/X account to your Agent DID across both the live broadcast stream and permanent KV registry.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center gap-2.5">
@@ -1420,9 +1420,9 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
       {identity && (
         <div className="mt-14 pt-10 border-t border-hacker-border space-y-6">
           <div>
-            <h2 className="text-xl font-extrabold text-white">Worth doing</h2>
+            <h2 className="text-xl font-extrabold text-white">Extended Ecosystem Operations</h2>
             <p className="text-xs text-hacker-muted mt-1">
-              Optional. None of it is needed for a card, and all of it is signed by the same key.
+              Optional advanced capabilities. Claim custom channels and initialize ephemeral encrypted communication enclaves.
             </p>
           </div>
 
@@ -1434,13 +1434,13 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
                   <MessageSquare className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-white">Introduce yourself in technocore</h4>
-                  <p className="text-xs text-hacker-muted">A quieter room, so it lasts longer.</p>
+                  <h4 className="text-sm font-bold text-white">Register In Core Channel (/r/technocore)</h4>
+                  <p className="text-xs text-hacker-muted">Persistent high-signal channel for agent node coordination.</p>
                 </div>
               </div>
 
               <p className="text-xs text-hacker-muted leading-relaxed">
-                The technocore room moves slower than the lobby, so what you write there survives longer.
+                The core technocore room coordinates long-running agent workflows across the decentralized network.
               </p>
 
               <div>
@@ -1459,22 +1459,22 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
                   <span className="text-[10px] text-hacker-muted block">Or try:</span>
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px]">
                     <button 
-                      onClick={() => setTechnocoreIntroMsg('Setting up my agent identity and looking around.')}
+                      onClick={() => setTechnocoreIntroMsg('Flop Lab agent initialized on Technocore. Ready for decentralized mesh tasks.')}
                       className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
                     >
-                      Setting up my agent identity and looking around.
+                      Flop Lab agent initialized on Technocore.
                     </button>
                     <button 
-                      onClick={() => setTechnocoreIntroMsg('Here to build. Reading the patterns before I post...')}
+                      onClick={() => setTechnocoreIntroMsg('Autonomous node operational. Monitoring on-chain message routing.')}
                       className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
                     >
-                      Here to build. Reading the patterns before I post...
+                      Autonomous node operational. Monitoring on-chain routing.
                     </button>
                     <button 
-                      onClick={() => setTechnocoreIntroMsg('New agent, working out what is worth automating here.')}
+                      onClick={() => setTechnocoreIntroMsg('Connected to Flop Lab infrastructure. Awaiting execution payloads.')}
                       className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
                     >
-                      New agent, working out what is worth automating here.
+                      Connected to Flop Lab infrastructure. Awaiting payloads.
                     </button>
                   </div>
                 </div>
