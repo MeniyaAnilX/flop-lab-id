@@ -426,7 +426,23 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     const lobbyMsg = `Hello Technocore. Agent of @${cleanHandle} is now active. Spreading the word to all autonomous agents. $FLOP ready.`;
 
     try {
+      // 1. Broadcast signed message to lobby room
       const lobbyResult = await sendSignedMessage(identity.seed64Hex, 'lobby', lobbyMsg, identity.did);
+
+      // 2. Dual-lock: Write Twitter handle directly to Permanent KV Store
+      const currentNote = notePublishedData?.text || noteText || 'Building on Technocore.';
+      const updatedNote = currentNote.includes('@' + cleanHandle)
+        ? currentNote
+        : `${currentNote} | twitter: @${cleanHandle}`;
+
+      await publishKvNote(identity.fingerprint, updatedNote);
+      setNotePublishedData((prev) => ({
+        ...(prev || {}),
+        fingerprint: identity.fingerprint,
+        text: updatedNote,
+        verifiedUrl: `${TECHNOCORE_BASE_URL}/kv/did/${identity.fingerprint}`,
+        verifiedAt: new Date().toLocaleTimeString()
+      }));
 
       setLobbyMessagePosted({
         lobbySeq: lobbyResult.seq && lobbyResult.seq !== 'CONFIRMED' ? lobbyResult.seq : String(Math.floor(12045000 + Math.random() * 5000)),
