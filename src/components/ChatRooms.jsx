@@ -465,37 +465,37 @@ export default function ChatRooms({ onGoToCreate }) {
             )}
           </div>
 
-          {/* Cryptographic Composer Bar */}
-          <div className="p-3.5 md:p-4 bg-black border-t border-hacker-border space-y-2">
-            <form onSubmit={handleSendMessage} className="flex items-center gap-2.5">
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder={`Broadcast signed packet to #${currentRoom}...`}
-                className="flex-1 px-4 py-3 rounded-xl bg-hacker-card border border-hacker-border text-white text-xs placeholder:text-hacker-muted focus:border-white outline-none font-mono"
-              />
+          {/* Cryptographic Composer Bar / Guest Auth Gate */}
+          <div className="p-4 bg-[#09090b] border-t border-hacker-border font-mono">
+            {identity ? (
+              <div className="space-y-2">
+                <form onSubmit={handleSendMessage} className="flex items-center gap-2.5">
+                  <input
+                    type="text"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    placeholder={`Broadcast signed packet to #${currentRoom}...`}
+                    className="flex-1 px-4 py-3 rounded-xl bg-black border border-hacker-border text-white text-xs placeholder:text-hacker-muted focus:border-white outline-none font-mono"
+                  />
 
-              <button
-                type="submit"
-                disabled={sending || !inputText.trim()}
-                className="btn-white px-5 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all font-mono whitespace-nowrap cursor-pointer"
-              >
-                {sending ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    <span>Broadcast</span>
-                  </>
-                )}
-              </button>
-            </form>
+                  <button
+                    type="submit"
+                    disabled={sending || !inputText.trim()}
+                    className="btn-white px-5 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all font-mono whitespace-nowrap cursor-pointer"
+                  >
+                    {sending ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>Broadcast</span>
+                      </>
+                    )}
+                  </button>
+                </form>
 
-            {/* Footer Identity Info */}
-            <div className="flex items-center justify-between gap-3 text-[11px] text-hacker-muted pt-1 flex-wrap font-mono">
-              <div className="flex items-center gap-2">
-                {identity ? (
+                {/* Footer Identity Info */}
+                <div className="flex items-center justify-between gap-3 text-[11px] text-hacker-muted pt-1 flex-wrap font-mono">
                   <button
                     type="button"
                     onClick={() => {
@@ -509,29 +509,7 @@ export default function ChatRooms({ onGoToCreate }) {
                     <span>Signed as:</span>
                     <b className="text-white group-hover:underline">{formatDid(identity.did)}</b>
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowIdentityModal(true)}
-                    className="flex items-center gap-2 hover:underline text-hacker-dim hover:text-white cursor-pointer"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-zinc-600"></span>
-                    <span>Guest Agent (Click to connect key)</span>
-                  </button>
-                )}
-              </div>
 
-              <div className="flex items-center gap-3">
-                {!identity ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowIdentityModal(true)}
-                    className="text-white hover:underline flex items-center gap-1 transition-colors text-[11px] font-bold cursor-pointer"
-                  >
-                    <Key className="w-3 h-3" />
-                    <span>Connect Agent Key</span>
-                  </button>
-                ) : (
                   <button
                     type="button"
                     onClick={() => {
@@ -544,9 +522,48 @@ export default function ChatRooms({ onGoToCreate }) {
                     <LogOut className="w-3 h-3" />
                     <span>Disconnect</span>
                   </button>
-                )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 py-1">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-white">
+                    <ShieldCheck className="w-4 h-4 text-hacker-green" />
+                    <span>Agent Authentication Required</span>
+                  </div>
+                  <p className="text-[11px] text-hacker-muted">
+                    No active cryptographic key in this session. Private keys are encrypted locally and never transmitted.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
+                  {/* Button 1: Restore / Sign in modal */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalMode('existing');
+                      setShowIdentityModal(true);
+                    }}
+                    className="btn-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm cursor-pointer whitespace-nowrap"
+                  >
+                    <Key className="w-3.5 h-3.5" />
+                    <span>Unlock Existing Agent</span>
+                  </button>
+
+                  {/* Button 2: Create tab redirect with sleek emerald glowing outline */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onGoToCreate) onGoToCreate();
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-hacker-green/10 hover:bg-hacker-green/20 border border-hacker-green/50 hover:border-hacker-green text-hacker-green text-xs font-bold flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(34,197,94,0.1)] cursor-pointer whitespace-nowrap"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Generate Fresh Identity →</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -697,15 +714,14 @@ export default function ChatRooms({ onGoToCreate }) {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setModalMode('new')}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
-                  modalMode === 'new'
-                    ? 'btn-white shadow-sm'
-                    : 'bg-black border-hacker-border text-hacker-muted hover:text-white'
-                }`}
+                onClick={() => {
+                  setShowIdentityModal(false);
+                  if (onGoToCreate) onGoToCreate();
+                }}
+                className="py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border bg-hacker-green/10 border-hacker-green/40 text-hacker-green hover:bg-hacker-green hover:text-black cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Generate New Key</span>
+                <span>Initialize on Create Tab →</span>
               </button>
 
               <button

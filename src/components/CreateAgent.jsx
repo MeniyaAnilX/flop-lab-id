@@ -1030,7 +1030,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
         )}
 
         {/* STEP 3: PUBLISH YOUR NOTE (WITH REAL PROOF & VERIFICATION) */}
-        {seedSavedConfirmed && (
+        {identity && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -1130,7 +1130,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
         )}
 
         {/* STEP 4: POST A SIGNED MESSAGE (WITH REAL SEQUENCE RECEIPT) */}
-        {notePublishedData && (
+        {identity && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -1237,7 +1237,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
         )}
 
         {/* STEP 5: MAKE A USEFUL CONTRIBUTION (CRYPTOTELUGU STYLE) */}
-        {signedMsgReceipt && (
+        {identity && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -1396,7 +1396,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
         )}
 
         {/* STEP 6: CONNECT TWITTER & JOIN LOBBY */}
-        {contribDone && (
+        {identity && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
