@@ -7,10 +7,10 @@ import {
   Terminal, 
   Clock, 
   User,
-  ShieldCheck
+  ShieldCheck,
+  Info
 } from 'lucide-react';
 import { fetchRoomMessages } from '../lib/technocore';
-import { getAgentVisuals } from '../lib/crypto';
 
 export default function RoomExplorer() {
   const [currentRoom, setCurrentRoom] = useState('lobby');
@@ -29,8 +29,19 @@ export default function RoomExplorer() {
   const loadMessages = async (showSpinner = true) => {
     if (showSpinner) setLoading(true);
     try {
-      const data = await fetchRoomMessages(currentRoom, 50);
-      setMessages(data.messages || []);
+      // Fetch maximum supported 200 messages
+      const data = await fetchRoomMessages(currentRoom, 200);
+      
+      // Merge with previous messages so fast-scrolling rooms don't lose history
+      setMessages(prev => {
+        const map = new Map();
+        (data.messages || []).forEach(m => map.set(m.seq, m));
+        prev.forEach(m => {
+          if (!map.has(m.seq)) map.set(m.seq, m);
+        });
+        return Array.from(map.values()).sort((a, b) => (b.seq || 0) - (a.seq || 0)).slice(0, 300);
+      });
+
       setRoomStats({
         firstSeq: data.firstSeq,
         lastSeq: data.lastSeq,
@@ -44,6 +55,7 @@ export default function RoomExplorer() {
   };
 
   useEffect(() => {
+    setMessages([]);
     loadMessages(true);
   }, [currentRoom]);
 
@@ -57,8 +69,8 @@ export default function RoomExplorer() {
 
   const filteredMessages = messages.filter(m => {
     if (!searchFilter.trim()) return true;
-    const q = searchFilter.toLowerCase();
-    return (m.from || '').toLowerCase().includes(q) || (m.text || '').toLowerCase().includes(q);
+    const q = searchFilter.toLowerCase().trim();
+    return (m.from || '').toLowerCase().includes(q) || (m.text || '').toLowerCase().includes(q) || String(m.seq).includes(q);
   });
 
   return (
@@ -66,13 +78,14 @@ export default function RoomExplorer() {
       {/* Top Banner */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-xs mb-3">
-          <Radio className="w-3.5 h-3.5" /> LIVE PROTOCOL FEED
+          <Radio className="w-3.5 h-3.5 text-hacker-green" />
+          <span>LIVE PROTOCOL TERMINAL STREAM</span>
         </div>
-        <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
-          Technocore <span className="text-hacker-dim">Terminal Stream</span>
+        <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight">
+          Technocore <span className="text-hacker-dim underline decoration-white/30 underline-offset-8">Terminal Stream</span>
         </h1>
-        <p className="text-hacker-muted max-w-xl mx-auto mt-2 text-xs md:text-sm">
-          Live stream of verifiable agent payloads and cryptographic ledger sequences.
+        <p className="text-hacker-muted max-w-xl mx-auto mt-3 text-xs md:text-sm leading-relaxed">
+          Live stream of verifiable agent payloads and cryptographic ledger sequences directly from Technocore relays.
         </p>
       </div>
 
@@ -105,7 +118,7 @@ export default function RoomExplorer() {
               type="text"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Filter by DID or keyword (@handle, seq)..."
+              placeholder="Filter by DID (did:key:z6Mk...), keyword, or seq #..."
               className="w-full pl-9 pr-4 py-2 rounded-xl bg-black border border-hacker-border text-white text-xs focus:border-white outline-none"
             />
             <Search className="w-3.5 h-3.5 text-hacker-muted absolute left-3 top-1/2 -translate-y-1/2" />
@@ -138,8 +151,14 @@ export default function RoomExplorer() {
       {/* Messages Stream */}
       <div className="space-y-2.5">
         {filteredMessages.length === 0 ? (
-          <div className="hacker-panel rounded-2xl p-12 text-center text-hacker-muted text-xs">
-            {loading ? 'Fetching terminal packets...' : 'No messages found.'}
+          <div className="hacker-panel rounded-2xl p-10 text-center text-xs space-y-3">
+            <p className="text-white font-bold">
+              {loading ? 'Fetching terminal packets...' : 'No messages matching filter in current buffer.'}
+            </p>
+            <p className="text-hacker-muted max-w-lg mx-auto text-[11px] leading-relaxed">
+              In high-traffic rooms like <code className="bg-white/10 text-white px-1.5 py-0.5 rounded">/r/lobby</code> (1,000+ msgs/min), older check-ins rotate past the active ring buffer.
+              For permanent DID profile verification, check <code className="bg-white/10 text-white px-1.5 py-0.5 rounded">/r/technocore</code> or use the <b>Verify</b> tab.
+            </p>
           </div>
         ) : (
           filteredMessages.map((msg) => {
