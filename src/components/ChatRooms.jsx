@@ -53,6 +53,7 @@ export default function ChatRooms({ onGoToCreate }) {
   const [sending, setSending] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastSeq, setLastSeq] = useState(0);
+  const [streamFilter, setStreamFilter] = useState('all'); // 'all' | 'e2ee_only'
 
   // E2EE Secret Enclave State
   const [e2eeMode, setE2eeMode] = useState(false);
@@ -398,14 +399,33 @@ export default function ChatRooms({ onGoToCreate }) {
         {/* RIGHT MAIN TERMINAL AREA */}
         <div className="lg:col-span-8 flex flex-col rounded-2xl border border-hacker-border bg-hacker-card shadow-2xl overflow-hidden">
           {/* Channel Header */}
-          <div className="px-5 py-3.5 border-b border-hacker-border flex items-center justify-between bg-black/60 backdrop-blur-md">
-            <div className="flex items-baseline gap-3">
+          <div className="px-5 py-3 border-b border-hacker-border flex items-center justify-between bg-black/60 backdrop-blur-md flex-wrap gap-2">
+            <div className="flex items-center gap-3">
               <h2 className="text-xl font-black text-white tracking-tight">
                 #{currentRoom}
               </h2>
-              <span className="text-[10px] text-hacker-muted uppercase tracking-wider hidden sm:inline">
-                {messages.length} PACKETS · LIVE ED25519 CIPHER STREAM
-              </span>
+              
+              <div className="flex items-center gap-1 bg-black p-0.5 rounded-lg border border-hacker-border text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setStreamFilter('all')}
+                  className={`px-2 py-0.5 rounded font-bold transition-all ${
+                    streamFilter === 'all' ? 'bg-white text-black' : 'text-hacker-muted hover:text-white'
+                  }`}
+                >
+                  All ({messages.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStreamFilter('e2ee_only')}
+                  className={`px-2 py-0.5 rounded font-bold flex items-center gap-1 transition-all ${
+                    streamFilter === 'e2ee_only' ? 'bg-hacker-green text-black' : 'text-hacker-muted hover:text-hacker-green'
+                  }`}
+                >
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Secret DMs</span>
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
@@ -416,7 +436,7 @@ export default function ChatRooms({ onGoToCreate }) {
 
               <button
                 onClick={() => loadRoomMessages(true)}
-                className="p-1.5 rounded-lg border border-hacker-border text-hacker-dim hover:text-white transition-all bg-black"
+                className="p-1.5 rounded-lg border border-hacker-border text-hacker-dim hover:text-white transition-all bg-black cursor-pointer"
                 title="Refresh Stream Packets"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-white' : ''}`} />
@@ -429,13 +449,34 @@ export default function ChatRooms({ onGoToCreate }) {
             ref={chatContainerRef}
             className="flex-1 p-4 md:p-5 overflow-y-auto space-y-4 bg-black/30 custom-scrollbar"
           >
-            {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-hacker-muted text-xs gap-2">
-                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin text-white' : 'text-hacker-muted'}`} />
-                <span>{loading ? 'Decrypting terminal payloads...' : `No recent packets in #${currentRoom}. Broadcast the first packet below.`}</span>
-              </div>
-            ) : (
-              messages.map((msg, idx) => {
+            {(() => {
+              const displayedMessages = messages.filter((msg) => {
+                if (streamFilter === 'e2ee_only') {
+                  if (typeof msg.text === 'string' && msg.text.startsWith('{')) {
+                    try {
+                      const obj = JSON.parse(msg.text);
+                      return obj.format === 'flop_e2ee_v1' || (obj.ciphertext && obj.recipientDid);
+                    } catch {}
+                  }
+                  return false;
+                }
+                return true;
+              });
+
+              if (displayedMessages.length === 0) {
+                return (
+                  <div className="h-full flex flex-col items-center justify-center text-hacker-muted text-xs gap-2 py-12">
+                    <Lock className="w-6 h-6 text-zinc-600" />
+                    <span>
+                      {streamFilter === 'e2ee_only' 
+                        ? `No encrypted secret DMs in #${currentRoom}. Switch to 'Secret Enclave' below to start an encrypted direct message!` 
+                        : loading ? 'Decrypting terminal payloads...' : `No recent packets in #${currentRoom}. Broadcast the first packet below.`}
+                    </span>
+                  </div>
+                );
+              }
+
+              return displayedMessages.map((msg, idx) => {
                 const isDid = (msg.from || '').startsWith('did:key:');
                 const isSelf = identity?.did && msg.from === identity.did;
                 const avatarText = isDid ? 'z6' : (msg.from || 'an').slice(0, 2).toUpperCase();
@@ -551,8 +592,8 @@ export default function ChatRooms({ onGoToCreate }) {
                     </div>
                   </div>
                 );
-              })
-            )}
+              });
+            })()}
           </div>
 
           {/* Cryptographic Composer Bar */}
