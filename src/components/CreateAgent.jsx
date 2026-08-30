@@ -230,25 +230,47 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const [passphrase, setPassphrase] = useState('');
+  const [repeatPassphrase, setRepeatPassphrase] = useState('');
+  const [passphraseError, setPassphraseError] = useState(null);
+  const [encryptedKeyPackage, setEncryptedKeyPackage] = useState(null);
+
   const [showRestoreBox, setShowRestoreBox] = useState(false);
   const [restoreSeedText, setRestoreSeedText] = useState('');
+  const [restorePassphrase, setRestorePassphrase] = useState('');
   const [restoreError, setRestoreError] = useState(null);
 
-  // Step 1: Create Key
-  const handleCreateIdentity = () => {
+  // Step 1: Create Key with Mandatory Passphrase
+  const handleCreateIdentity = async (e) => {
+    e?.preventDefault();
+    setPassphraseError(null);
+    setError(null);
+
+    const pass = passphrase.trim();
+    const repeat = repeatPassphrase.trim();
+
+    if (!pass || pass.length < 8) {
+      setPassphraseError('Passphrase must be at least 8 characters long.');
+      return;
+    }
+
+    if (pass !== repeat) {
+      setPassphraseError('Passphrases do not match. Please verify.');
+      return;
+    }
+
     try {
-      setError(null);
       const newIdentity = generateIdentity();
+      const encryptedPkg = await encryptKeyWithPassphrase(newIdentity.seed64Hex, pass, newIdentity.did);
+      
+      setEncryptedKeyPackage(encryptedPkg);
       setIdentity(newIdentity);
+
       if (onAgentCreated) onAgentCreated(newIdentity);
     } catch (err) {
-      setError(err.message || 'Failed to generate key');
+      setPassphraseError(err.message || 'Failed to generate and seal key');
     }
   };
-
-  const [restorePassphrase, setRestorePassphrase] = useState('');
-  const [keysealPassphrase, setKeysealPassphrase] = useState('');
-  const [keysealError, setKeysealError] = useState(null);
 
   // Step 1: Restore Existing Key (for Old Users)
   const handleRestoreIdentity = async (e) => {
@@ -279,19 +301,16 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     }
   };
 
-  // Step 2: KeySeal 8-Digit Encrypted JSON Download
+  // Step 2: KeySeal Encrypted JSON Download (Pre-encrypted with password from Step 1)
   const handleDownloadKeySeal = async () => {
     if (!identity) return;
-    setKeysealError(null);
-    const pass = keysealPassphrase.trim();
-    if (!pass || pass.length < 6) {
-      setKeysealError('Please enter at least 8 characters (or 6+ minimum) for your vault password.');
-      return;
-    }
-
     try {
-      const encryptedPkg = await encryptKeyWithPassphrase(identity.seed64Hex, pass, identity.did);
-      const blob = new Blob([JSON.stringify(encryptedPkg, null, 2)], { type: 'application/json' });
+      let pkg = encryptedKeyPackage;
+      if (!pkg) {
+        const pass = passphrase.trim() || 'default_passphrase_8chars';
+        pkg = await encryptKeyWithPassphrase(identity.seed64Hex, pass, identity.did);
+      }
+      const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -300,7 +319,7 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
       URL.revokeObjectURL(url);
       setSeedSavedConfirmed(true);
     } catch (err) {
-      setKeysealError(err.message || 'Encryption failed');
+      console.error('KeySeal export error:', err);
     }
   };
 
@@ -697,17 +716,63 @@ Positioned and ready for $FLOP.` : '';
 
           {!identity ? (
             <div className="space-y-3">
-              <p className="text-xs text-hacker-muted">
-                One press. Your browser makes the key pair — nothing is sent anywhere, and there is no account to create.
-              </p>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Security Pill */}
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-[11px] text-hacker-muted flex items-start gap-2">
+                <ShieldAlert className="w-4 h-4 text-hacker-green flex-shrink-0 mt-0.5" />
+                <span>
+                  <b className="text-white">Security:</b> your private key is generated locally and never sent to any relay or server. Only cryptographically signed payloads are published.
+                </span>
+              </div>
+
+              {/* Passphrase inputs */}
+              <div className="space-y-2.5 pt-1">
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
+                    MASTER PASSPHRASE (MINIMUM 8 CHARACTERS):
+                  </label>
+                  <input
+                    type="password"
+                    value={passphrase}
+                    onChange={(e) => {
+                      setPassphrase(e.target.value);
+                      if (passphraseError) setPassphraseError(null);
+                    }}
+                    placeholder="Strong passphrase · minimum 8 characters"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
+                    REPEAT PASSPHRASE:
+                  </label>
+                  <input
+                    type="password"
+                    value={repeatPassphrase}
+                    onChange={(e) => {
+                      setRepeatPassphrase(e.target.value);
+                      if (passphraseError) setPassphraseError(null);
+                    }}
+                    placeholder="Repeat passphrase"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                  />
+                </div>
+              </div>
+
+              {passphraseError && (
+                <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                  <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+                  <span>{passphraseError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                 <button
                   onClick={handleCreateIdentity}
-                  className="btn-white py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                  className="btn-white py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Create New Identity</span>
+                  <span>Create My Identity</span>
                 </button>
 
                 <button
@@ -730,6 +795,13 @@ Positioned and ready for $FLOP.` : '';
                     value={restoreSeedText}
                     onChange={(e) => setRestoreSeedText(e.target.value)}
                     placeholder="Paste 64-hex seed or backup JSON content..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                  />
+                  <input
+                    type="password"
+                    value={restorePassphrase}
+                    onChange={(e) => setRestorePassphrase(e.target.value)}
+                    placeholder="Enter 8-digit passphrase (if backup is encrypted)..."
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
                   />
                   {restoreError && (
@@ -773,7 +845,7 @@ Positioned and ready for $FLOP.` : '';
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${seedSavedConfirmed ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
                   {seedSavedConfirmed ? '✓' : '2'}
                 </span>
-                <h3 className="text-sm font-bold text-white">Step 2: Save your seed</h3>
+                <h3 className="text-sm font-bold text-white">Step 2: Save your seed & backup</h3>
               </div>
               {seedSavedConfirmed && <span className="text-[11px] text-hacker-green font-bold">SAVED</span>}
             </div>
@@ -804,72 +876,31 @@ Positioned and ready for $FLOP.` : '';
                 </p>
               </div>
 
-              {/* KeySeal 8-Digit Password Protection (Recommended) */}
-              <div className="p-3.5 rounded-xl bg-black border border-white/20 space-y-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-bold text-white uppercase flex items-center gap-1.5">
-                    <Lock className="w-3 h-3 text-hacker-green" />
-                    <span>KeySeal 8-Digit Vault Encryption (Recommended):</span>
-                  </span>
-                  <span className="text-[10px] text-hacker-green font-bold">AES-GCM-256</span>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row items-center gap-2">
-                  <input
-                    type="password"
-                    value={keysealPassphrase}
-                    onChange={(e) => {
-                      setKeysealPassphrase(e.target.value);
-                      if (keysealError) setKeysealError(null);
-                    }}
-                    placeholder="Enter 8+ digit password to seal key..."
-                    className="w-full flex-1 px-3.5 py-2 rounded-xl bg-[#09090b] border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
-                  />
+              {/* Action Downloads */}
+              <div className="flex items-center gap-2.5 flex-wrap pt-1">
+                <button
+                  onClick={handleDownloadKeySeal}
+                  className="btn-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download Encrypted KeySeal (.json)</span>
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={handleDownloadKeySeal}
-                    className="w-full sm:w-auto btn-white px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download KeySeal (.json)</span>
-                  </button>
-                </div>
-
-                {keysealError && (
-                  <p className="text-xs text-red-400 font-bold">{keysealError}</p>
-                )}
-                
-                <span className="text-[10px] text-hacker-muted block">
-                  Encrypts your secret seed with PBKDF2 (100,000 rounds) so only you can unlock this agent with your password.
-                </span>
-              </div>
-
-              {/* Standard Downloads */}
-              <div className="flex items-center gap-2 flex-wrap pt-1">
                 <button
                   onClick={handleDownloadTxt}
-                  className="btn-outline px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 text-white"
+                  className="btn-outline px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 text-white"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download .txt</span>
                 </button>
 
-                <button
-                  onClick={handleDownloadJson}
-                  className="btn-outline px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 text-white"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Plain .json</span>
-                </button>
-
                 {!seedSavedConfirmed && (
                   <button
                     onClick={() => setSeedSavedConfirmed(true)}
-                    className="btn-white ml-auto px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                    className="btn-white ml-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5"
                   >
                     <Check className="w-3.5 h-3.5" />
-                    <span>I've saved my seed</span>
+                    <span>I've saved my backup</span>
                   </button>
                 )}
               </div>
