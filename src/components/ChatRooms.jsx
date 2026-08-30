@@ -28,8 +28,6 @@ import {
 } from 'lucide-react';
 import { 
   fetchRoomMessages, 
-  getCachedRoomMessages, 
-  saveCachedRoomMessages, 
   sendSignedMessage, 
   TECHNOCORE_BASE_URL 
 } from '../lib/technocore';
@@ -54,8 +52,8 @@ export default function ChatRooms({ onGoToCreate }) {
   // Current Active Channel
   const [currentRoom, setCurrentRoom] = useState('lobby');
   const [roomQuery, setRoomQuery] = useState('');
-  const [messages, setMessages] = useState(() => getCachedRoomMessages('lobby'));
-  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isMeshLive, setIsMeshLive] = useState(true);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
@@ -91,7 +89,7 @@ export default function ChatRooms({ onGoToCreate }) {
 
   // Fetch Channel Messages (Merge smoothly)
   const loadRoomMessages = async (showSpinner = false) => {
-    if (showSpinner && messages.length === 0) setLoading(true);
+    if (showSpinner) setLoading(true);
     try {
       const data = await fetchRoomMessages(currentRoom, 200);
       setIsMeshLive(data.isLive !== false);
@@ -117,8 +115,8 @@ export default function ChatRooms({ onGoToCreate }) {
 
   // Change channel
   useEffect(() => {
-    setMessages(getCachedRoomMessages(currentRoom));
-    loadRoomMessages(false);
+    setMessages([]);
+    loadRoomMessages(true);
   }, [currentRoom]);
 
   // Auto-refresh interval (every 3 seconds)

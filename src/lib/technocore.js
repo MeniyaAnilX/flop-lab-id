@@ -141,37 +141,14 @@ export async function readKvNote(fingerprint) {
 }
 
 /**
- * Get cached messages from localStorage for 0ms instant render
- */
-export function getCachedRoomMessages(room = 'lobby') {
-  try {
-    const cached = localStorage.getItem(`flop_cached_room_${room}`);
-    return cached ? JSON.parse(cached) : [];
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Save messages to localStorage cache
- */
-export function saveCachedRoomMessages(room = 'lobby', messages = []) {
-  try {
-    if (!messages || !Array.isArray(messages)) return;
-    localStorage.setItem(`flop_cached_room_${room}`, JSON.stringify(messages.slice(-300)));
-  } catch {}
-}
-
-/**
- * Fetch messages from a Technocore room with ultra-fast timeout and instant cache fallback
+ * Fetch messages from a Technocore room (Pure live in-memory stream)
  */
 export async function fetchRoomMessages(room = 'lobby', limit = 100) {
-  const localCache = getCachedRoomMessages(room);
   const cleanRoom = encodeURIComponent(String(room || 'lobby').trim());
 
-  // Use AbortController for fast 3.5s timeout
+  // Fast 4s timeout AbortController
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3500);
+  const timeoutId = setTimeout(() => controller.abort(), 4000);
 
   try {
     const response = await fetch(`${TECHNOCORE_BASE_URL}/r/${cleanRoom}?format=json&limit=${limit}&t=${Date.now()}`, {
@@ -188,25 +165,17 @@ export async function fetchRoomMessages(room = 'lobby', limit = 100) {
       const data = await response.json();
       const serverMsgs = Array.isArray(data.messages) ? data.messages : [];
       
-      // Merge server messages with locally cached/sent messages
-      const mergedMap = new Map();
-      localCache.forEach((m) => mergedMap.set(m.seq || `${m.nonce}-${m.from}`, m));
-      serverMsgs.forEach((m) => mergedMap.set(m.seq || `${m.nonce}-${m.from}`, m));
-      
-      const sorted = Array.from(mergedMap.values()).sort((a, b) => (a.seq || 0) - (b.seq || 0));
-      saveCachedRoomMessages(room, sorted);
-
       return {
         room: data.room || room,
         firstSeq: data.first_seq || 0,
         lastSeq: data.last_seq || 0,
-        count: sorted.length,
-        messages: sorted,
+        count: serverMsgs.length,
+        messages: serverMsgs,
         isLive: true
       };
     }
   } catch (err) {
-    // Network or timeout failure - smoothly fallback to cached messages
+    // Network or timeout
   } finally {
     clearTimeout(timeoutId);
   }
@@ -215,8 +184,8 @@ export async function fetchRoomMessages(room = 'lobby', limit = 100) {
     room,
     firstSeq: 0,
     lastSeq: 0,
-    count: localCache.length,
-    messages: localCache,
+    count: 0,
+    messages: [],
     isLive: false
   };
 }
