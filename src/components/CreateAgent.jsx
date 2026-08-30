@@ -85,8 +85,8 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
   const [contribType, setContribType] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).contribType : 'X thread';
-    } catch { return 'X thread'; }
+      return saved ? JSON.parse(saved).contribType : 'X Post';
+    } catch { return 'X Post'; }
   });
   const [contribTopic, setContribTopic] = useState(() => {
     try {
@@ -446,12 +446,9 @@ Positioned and ready for $FLOP.` : '';
   const tweetIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
 
   const contributionTypes = [
-    { id: 'Video / stream', icon: Video },
-    { id: 'X thread', icon: Twitter },
-    { id: 'Written piece', icon: FileText },
-    { id: 'Diagram', icon: PieChart },
-    { id: 'Translation', icon: Languages },
-    { id: 'Code / tool', icon: FileCode2 },
+    { id: 'X Post', icon: Twitter },
+    { id: 'Tool', icon: FileCode2 },
+    { id: 'Video', icon: Video },
   ];
 
   return (
