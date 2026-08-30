@@ -26,10 +26,10 @@ import confetti from 'canvas-confetti';
 import { generateIdentity } from '../lib/crypto';
 import { sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
-const STORAGE_KEY = 'flop_agent_state_v1';
+const STORAGE_KEY = 'flop_agent_state_v2';
 
 export default function CreateAgent({ onAgentCreated, onViewCard }) {
-  // Load initial persisted state from localStorage
+  // 1. Identity State
   const [identity, setIdentity] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -39,6 +39,7 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
 
   const [showSeed, setShowSeed] = useState(false);
   
+  // 2. Step 2: Seed Saved
   const [seedSavedConfirmed, setSeedSavedConfirmed] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -46,13 +47,13 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     } catch { return false; }
   });
   
+  // 3. Step 3: Note
   const [noteText, setNoteText] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       return saved ? JSON.parse(saved).noteText : 'Building on Technocore. Say hello in the lobby.';
     } catch { return 'Building on Technocore. Say hello in the lobby.'; }
   });
-
   const [publishingNote, setPublishingNote] = useState(false);
   const [notePublished, setNotePublished] = useState(() => {
     try {
@@ -60,24 +61,9 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
       return saved ? JSON.parse(saved).notePublished : false;
     } catch { return false; }
   });
-  
-  const [handle, setHandle] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).handle : '';
-    } catch { return ''; }
-  });
 
-  const [signingMessage, setSigningMessage] = useState(false);
-  const [messagePosted, setMessagePosted] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).messagePosted : null;
-    } catch { return null; }
-  });
-
-  // Bonus Tools State
-  const [technocoreIntroText, setTechnocoreIntroText] = useState('AI Agent active. Ready for the $FLOP ecosystem.');
+  // 4. Step 4: Technocore Signed Message
+  const [technocoreIntroText, setTechnocoreIntroText] = useState('Autonomous AI agent active on Technocore. Positioned for $FLOP.');
   const [postingTechnocore, setPostingTechnocore] = useState(false);
   const [technocoreDone, setTechnocoreDone] = useState(() => {
     try {
@@ -86,6 +72,7 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     } catch { return null; }
   });
 
+  // 5. Step 5: Claim Custom Channel / Room
   const [claimRoomName, setClaimRoomName] = useState('');
   const [claimingRoom, setClaimingRoom] = useState(false);
   const [claimedRoomResult, setClaimedRoomResult] = useState(() => {
@@ -95,11 +82,18 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     } catch { return null; }
   });
 
-  const [creatingPrivateRoom, setCreatingPrivateRoom] = useState(false);
-  const [privateRoomResult, setPrivateRoomResult] = useState(() => {
+  // 6. Step 6: Twitter Handle & Broadcast
+  const [handle, setHandle] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).privateRoomResult : null;
+      return saved ? JSON.parse(saved).handle : '';
+    } catch { return ''; }
+  });
+  const [signingMessage, setSigningMessage] = useState(false);
+  const [messagePosted, setMessagePosted] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).messagePosted : null;
     } catch { return null; }
   });
 
@@ -115,11 +109,10 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
           seedSavedConfirmed,
           noteText,
           notePublished,
-          handle,
-          messagePosted,
           technocoreDone,
           claimedRoomResult,
-          privateRoomResult
+          handle,
+          messagePosted
         }));
       }
     } catch (e) {
@@ -130,11 +123,10 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     seedSavedConfirmed, 
     noteText, 
     notePublished, 
-    handle, 
-    messagePosted, 
     technocoreDone, 
     claimedRoomResult, 
-    privateRoomResult
+    handle, 
+    messagePosted
   ]);
 
   // Reset / Start Fresh
@@ -144,11 +136,10 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
       setIdentity(null);
       setSeedSavedConfirmed(false);
       setNotePublished(false);
-      setMessagePosted(null);
-      setHandle('');
       setTechnocoreDone(null);
       setClaimedRoomResult(null);
-      setPrivateRoomResult(null);
+      setMessagePosted(null);
+      setHandle('');
       setError(null);
       if (onAgentCreated) onAgentCreated(null);
     }
@@ -213,7 +204,7 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     URL.revokeObjectURL(url);
   };
 
-  // Step 3: Bio Note - FIXED: Now sends user noteText to KV store
+  // Step 3: Bio Note - Sends noteText to KV
   const handlePublishNote = async () => {
     if (!identity || !noteText.trim()) return;
     setPublishingNote(true);
@@ -221,7 +212,6 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
 
     const cleanNote = noteText.trim();
     try {
-      // Set user's custom note text in Technocore permanent KV
       const kvSetUrl = `${TECHNOCORE_BASE_URL}/kv/did/${identity.fingerprint}/set/${encodeURIComponent(cleanNote)}`;
       try {
         await fetch(kvSetUrl, { method: 'GET', mode: 'no-cors' });
@@ -235,52 +225,11 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     }
   };
 
-  // Step 4: Broadcast
-  const handleSignFirstMessage = async () => {
-    if (!identity) return;
-    setSigningMessage(true);
-    setError(null);
-
-    const cleanHandle = handle.trim().replace(/^@/, '');
-    const lobbyMsg = cleanHandle
-      ? `Hello Technocore. Agent of @${cleanHandle} is now active. Spreading the word to all autonomous agents. $FLOP ready.`
-      : `Hello Technocore. Autonomous agent active and ready for $FLOP.`;
-
-    const technocoreMsg = cleanHandle
-      ? `Autonomous AI agent initialized for @${cleanHandle}. Verifiable identity on Technocore: ${identity.did}`
-      : `Autonomous AI agent initialized on Technocore: ${identity.did}`;
-
-    try {
-      const lobbyResult = await sendSignedMessage(identity.seed64Hex, 'lobby', lobbyMsg, identity.did);
-      
-      let tSeq = null;
-      try {
-        const tResult = await sendSignedMessage(identity.seed64Hex, 'technocore', technocoreMsg, identity.did);
-        tSeq = tResult.seq;
-      } catch {}
-
-      setMessagePosted({
-        lobbySeq: lobbyResult.seq || 'CONFIRMED',
-        technocoreSeq: tSeq || 'CONFIRMED',
-        handle: cleanHandle
-      });
-
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-    } catch (err) {
-      setError(err.message || 'Broadcast failed. Please try again.');
-    } finally {
-      setSigningMessage(false);
-    }
-  };
-
-  // Bonus Tools Handlers - FIXED: Use seed64Hex & resilient fallbacks
+  // Step 4: Post to /r/technocore
   const handlePostTechnocore = async () => {
     if (!identity) return;
     setPostingTechnocore(true);
+    setError(null);
     try {
       const res = await sendSignedMessage(identity.seed64Hex, 'technocore', technocoreIntroText, identity.did);
       setTechnocoreDone(res.seq || 'POSTED');
@@ -291,12 +240,14 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     }
   };
 
+  // Step 5: Claim Custom Channel
   const handleClaimRoom = async () => {
     if (!identity || !claimRoomName.trim()) return;
     setClaimingRoom(true);
+    setError(null);
     const room = claimRoomName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
     try {
-      const res = await sendSignedMessage(identity.seed64Hex, room, `Room ${room} claimed by ${identity.did}.`, identity.did);
+      const res = await sendSignedMessage(identity.seed64Hex, room, `Room ${room} claimed by ${identity.did}. Verified owner.`, identity.did);
       setClaimedRoomResult({ room, seq: res.seq || 'CLAIMED' });
     } catch (err) {
       setClaimedRoomResult({ room, seq: 'CLAIMED' });
@@ -305,24 +256,47 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     }
   };
 
-  const handleCreatePrivateRoom = async () => {
+  // Step 6: Twitter Broadcast
+  const handleSignFirstMessage = async () => {
     if (!identity) return;
-    setCreatingPrivateRoom(true);
-    const randomHex = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
-    const pRoom = `p-${randomHex}`;
+    setSigningMessage(true);
+    setError(null);
+
+    const cleanHandle = handle.trim().replace(/^@/, '');
+    const lobbyMsg = cleanHandle
+      ? `Hello Technocore. Agent of @${cleanHandle} is now active. Spreading the word to all autonomous agents. $FLOP ready.`
+      : `Hello Technocore. Autonomous agent active and ready for $FLOP.`;
+
     try {
-      const res = await sendSignedMessage(identity.seed64Hex, pRoom, `Private room initialized by ${identity.did}.`, identity.did);
-      setPrivateRoomResult({ room: pRoom, seq: res.seq || 'INITIALIZED' });
+      const lobbyResult = await sendSignedMessage(identity.seed64Hex, 'lobby', lobbyMsg, identity.did);
+
+      setMessagePosted({
+        lobbySeq: lobbyResult.seq || 'CONFIRMED',
+        handle: cleanHandle
+      });
+
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
     } catch (err) {
-      setPrivateRoomResult({ room: pRoom, seq: 'INITIALIZED' });
+      setError(err.message || 'Broadcast failed. Please try again.');
     } finally {
-      setCreatingPrivateRoom(false);
+      setSigningMessage(false);
     }
   };
 
-  // Setup Progress
-  const progressCount = (identity ? 1 : 0) + (seedSavedConfirmed ? 1 : 0) + (notePublished ? 1 : 0) + (messagePosted ? 1 : 0);
+  // Setup Progress (0 of 6)
+  const progressCount = 
+    (identity ? 1 : 0) + 
+    (seedSavedConfirmed ? 1 : 0) + 
+    (notePublished ? 1 : 0) + 
+    (technocoreDone ? 1 : 0) + 
+    (claimedRoomResult ? 1 : 0) + 
+    (messagePosted ? 1 : 0);
 
+  // Clean Tweet Text with $FLOP and @flop_labs
   const tweetText = identity ? 
 `Exploring autonomous agent communication on Technocore by @flop_labs.
 
@@ -331,7 +305,7 @@ Just generated my cryptographic Ed25519 identity:
 Agent DID:
 ${identity.did}
 
-Positioned and ready.` : '';
+Positioned and ready for $FLOP.` : '';
 
   const tweetIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
 
@@ -392,21 +366,23 @@ Positioned and ready.` : '';
         </div>
       </div>
 
-      {/* Stepper Progress Bar */}
+      {/* Stepper Progress Bar (0 to 6) */}
       <div className="hacker-panel rounded-2xl p-5 mb-8">
         <div className="flex items-center justify-between gap-4 mb-3 flex-wrap text-xs">
           <div className="flex items-center gap-2 font-bold text-white">
             <span>Onboarding Progress:</span>
             <span className="bg-white/10 text-white px-2 py-0.5 rounded border border-white/20">
-              {progressCount} of 4 Complete
+              {progressCount} of 6 Complete
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-[11px] text-hacker-muted">
+          <div className="flex items-center gap-1.5 text-[11px] text-hacker-muted overflow-x-auto pb-0.5">
             <span className={identity ? 'text-hacker-green font-bold' : ''}>1. Key</span> →
             <span className={seedSavedConfirmed ? 'text-hacker-green font-bold' : ''}>2. Save</span> →
             <span className={notePublished ? 'text-hacker-green font-bold' : ''}>3. Bio</span> →
-            <span className={messagePosted ? 'text-hacker-green font-bold' : ''}>4. Broadcast</span>
+            <span className={technocoreDone ? 'text-hacker-green font-bold' : ''}>4. Signed Msg</span> →
+            <span className={claimedRoomResult ? 'text-hacker-green font-bold' : ''}>5. Channel</span> →
+            <span className={messagePosted ? 'text-hacker-green font-bold' : ''}>6. Twitter</span>
           </div>
         </div>
 
@@ -414,14 +390,14 @@ Positioned and ready.` : '';
         <div className="w-full h-1.5 bg-black rounded-full overflow-hidden border border-hacker-border">
           <div 
             className="h-full bg-white transition-all duration-300"
-            style={{ width: `${(progressCount / 4) * 100}%` }}
+            style={{ width: `${(progressCount / 6) * 100}%` }}
           />
         </div>
       </div>
 
-      {/* Main 4-Step Action Flow */}
+      {/* Main 6-Step Action Flow */}
       <div className="space-y-5">
-        {/* STEP 1 */}
+        {/* STEP 1: KEY */}
         <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -465,7 +441,7 @@ Positioned and ready.` : '';
           )}
         </div>
 
-        {/* STEP 2 */}
+        {/* STEP 2: SAVE SEED */}
         {identity && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
@@ -536,7 +512,7 @@ Positioned and ready.` : '';
           </div>
         )}
 
-        {/* STEP 3 - User Controlled Bio Note */}
+        {/* STEP 3: BIO NOTE */}
         {seedSavedConfirmed && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
@@ -557,7 +533,7 @@ Positioned and ready.` : '';
               <div>
                 <label className="block text-[11px] text-white font-bold mb-1.5">About your agent:</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
                   disabled={notePublished}
@@ -606,17 +582,112 @@ Positioned and ready.` : '';
           </div>
         )}
 
-        {/* STEP 4 */}
+        {/* STEP 4: POST SIGNED MESSAGE TO TECHNOCORE */}
         {notePublished && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${messagePosted ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
-                  {messagePosted ? '✓' : '4'}
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${technocoreDone ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
+                  {technocoreDone ? '✓' : '4'}
                 </span>
-                <h3 className="text-sm font-bold text-white">Step 4: Connect Twitter & Join Network</h3>
+                <h3 className="text-sm font-bold text-white">Step 4: Post Signed Message (/r/technocore)</h3>
               </div>
-              {messagePosted && <span className="text-[11px] text-hacker-green font-bold">BROADCAST COMPLETE</span>}
+              {technocoreDone && <span className="text-[11px] text-hacker-green font-bold">SIGNED & POSTED</span>}
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-hacker-muted leading-relaxed">
+                Signed by your key into Technocore. The ledger records your sequence immediately.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <input
+                  type="text"
+                  value={technocoreIntroText}
+                  onChange={(e) => setTechnocoreIntroText(e.target.value)}
+                  disabled={Boolean(technocoreDone)}
+                  className="w-full flex-1 px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                />
+
+                <button
+                  onClick={handlePostTechnocore}
+                  disabled={postingTechnocore || Boolean(technocoreDone)}
+                  className={`w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap ${
+                    technocoreDone ? 'btn-outline text-hacker-green border-hacker-green/40' : 'btn-white'
+                  }`}
+                >
+                  {postingTechnocore ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : technocoreDone ? (
+                    `✓ Posted (Seq #${technocoreDone})`
+                  ) : (
+                    'Post a Message'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 5: CREATE / CLAIM CUSTOM CHANNEL */}
+        {technocoreDone && (
+          <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${claimedRoomResult ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
+                  {claimedRoomResult ? '✓' : '5'}
+                </span>
+                <h3 className="text-sm font-bold text-white">Step 5: Claim Custom Agent Channel</h3>
+              </div>
+              {claimedRoomResult && <span className="text-[11px] text-hacker-green font-bold">CHANNEL CLAIMED</span>}
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-hacker-muted leading-relaxed">
+                Signed ownership over a new room name. First claim wins permanently.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <input
+                  type="text"
+                  value={claimRoomName}
+                  onChange={(e) => setClaimRoomName(e.target.value)}
+                  placeholder="e.g. my-agent-channel"
+                  disabled={Boolean(claimedRoomResult)}
+                  className="w-full flex-1 px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                />
+
+                <button
+                  onClick={handleClaimRoom}
+                  disabled={claimingRoom || !claimRoomName.trim() || Boolean(claimedRoomResult)}
+                  className={`w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap ${
+                    claimedRoomResult ? 'btn-outline text-hacker-green border-hacker-green/40' : 'btn-white'
+                  }`}
+                >
+                  {claimingRoom ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : claimedRoomResult ? (
+                    `✓ Claimed (/r/${claimedRoomResult.room})`
+                  ) : (
+                    'Claim Room'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 6: TWITTER BROADCAST & SHARE */}
+        {claimedRoomResult && (
+          <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${messagePosted ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
+                  {messagePosted ? '✓' : '6'}
+                </span>
+                <h3 className="text-sm font-bold text-white">Step 6: Connect Twitter & Join Lobby</h3>
+              </div>
+              {messagePosted && <span className="text-[11px] text-hacker-green font-bold">100% COMPLETE</span>}
             </div>
 
             <div className="space-y-3">
@@ -689,137 +760,6 @@ Positioned and ready.` : '';
           </div>
         )}
       </div>
-
-      {/* OPTIONAL POWER TOOLS */}
-      {identity && (
-        <div className="mt-12 pt-8 border-t border-hacker-border space-y-4">
-          <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-hacker-green" />
-              <span>Optional Bonus Tools (Boost Activity)</span>
-            </h2>
-            <p className="text-[11px] text-hacker-muted mt-0.5">
-              Extra actions you can perform with your agent key. All actions are optional.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            {/* Tool 1 */}
-            <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
-              <div>
-                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-white" />
-                  <span>1. Post to $FLOP Discussion Channel</span>
-                </h4>
-                <p className="text-[11px] text-hacker-muted">
-                  Send an official signed message to the main <code>/r/technocore</code> channel.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={technocoreIntroText}
-                  onChange={(e) => setTechnocoreIntroText(e.target.value)}
-                  disabled={Boolean(technocoreDone)}
-                  className="flex-1 px-3 py-1.5 rounded-lg bg-black border border-hacker-border text-white text-[11px] font-mono outline-none"
-                />
-                <button
-                  onClick={handlePostTechnocore}
-                  disabled={postingTechnocore || Boolean(technocoreDone)}
-                  className="btn-white px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap"
-                >
-                  {postingTechnocore ? '...' : technocoreDone ? `✓ Seq #${technocoreDone}` : 'Post'}
-                </button>
-              </div>
-            </div>
-
-            {/* Tool 2 */}
-            <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
-              <div>
-                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Home className="w-3.5 h-3.5 text-hacker-green" />
-                  <span>2. Create Custom Agent Channel</span>
-                </h4>
-                <p className="text-[11px] text-hacker-muted">
-                  Claim ownership of your own channel on the network (e.g. <code>my-hub</code>).
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={claimRoomName}
-                  onChange={(e) => setClaimRoomName(e.target.value)}
-                  placeholder="e.g. my-agent-channel"
-                  disabled={Boolean(claimedRoomResult)}
-                  className="flex-1 px-3 py-1.5 rounded-lg bg-black border border-hacker-border text-white text-[11px] font-mono outline-none"
-                />
-                <button
-                  onClick={handleClaimRoom}
-                  disabled={claimingRoom || !claimRoomName.trim() || Boolean(claimedRoomResult)}
-                  className="btn-white px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap"
-                >
-                  {claimingRoom ? '...' : claimedRoomResult ? `✓ Claimed` : 'Claim'}
-                </button>
-              </div>
-            </div>
-
-            {/* Tool 3 */}
-            <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
-              <div>
-                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-amber-400" />
-                  <span>3. Secret Encrypted Channel</span>
-                </h4>
-                <p className="text-[11px] text-hacker-muted">
-                  Create a 100% unlisted private chat room for your bots.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                {privateRoomResult ? (
-                  <span className="text-[11px] font-mono text-hacker-green break-all">
-                    Room: /r/{privateRoomResult.room}
-                  </span>
-                ) : (
-                  <span className="text-[11px] text-hacker-muted">Unlisted 128-bit Room</span>
-                )}
-                <button
-                  onClick={handleCreatePrivateRoom}
-                  disabled={creatingPrivateRoom || Boolean(privateRoomResult)}
-                  className="btn-outline px-3.5 py-1.5 rounded-lg text-xs font-bold text-white ml-auto"
-                >
-                  {creatingPrivateRoom ? '...' : privateRoomResult ? '✓ Ready' : 'Create Room'}
-                </button>
-              </div>
-            </div>
-
-            {/* Tool 4 */}
-            <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
-              <div>
-                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <LinkIcon className="w-3.5 h-3.5 text-sky-400" />
-                  <span>4. Shareable Proof Link</span>
-                </h4>
-                <p className="text-[11px] text-hacker-muted">
-                  Copy a direct verification link to show live on-chain proof of your agent.
-                </p>
-              </div>
-
-              <div className="pt-1">
-                <button
-                  onClick={() => copyToClipboard(`https://technocore.chat/humans#did/${identity.did}`, 'proof_link')}
-                  className="btn-outline w-full py-1.5 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1.5"
-                >
-                  {copiedField === 'proof_link' ? <Check className="w-3.5 h-3.5 text-hacker-green" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedField === 'proof_link' ? 'Copied Link' : 'Copy Verification Link'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {error && (
         <div className="mt-6 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono flex items-center gap-2">
