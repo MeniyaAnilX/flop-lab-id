@@ -15,9 +15,9 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { parseDid, getAgentVisuals } from '../lib/crypto';
-import { verifyDidStatus, TECHNOCORE_BASE_URL } from '../lib/technocore';
+import { verifyDidStatus, readKvNote, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
-const STORAGE_KEY = 'flop_agent_state_v5';
+const STORAGE_KEY = 'flop_agent_state_v6';
 
 export default function AgentCard({ initialIdentity }) {
   const [didInput, setDidInput] = useState(() => {
@@ -81,23 +81,10 @@ export default function AgentCard({ initialIdentity }) {
       // 1. Strict Cryptographic Verification of the DID
       const parsed = parseDid(didToQuery);
       
-      let fetchedNote = '';
-      // 2. Fetch real KV Note from Technocore Store
-      try {
-        const kvRes = await fetch(`${TECHNOCORE_BASE_URL}/kv/did/${parsed.fingerprint}?t=${Date.now()}`);
-        if (kvRes.ok) {
-          const text = await kvRes.text();
-          if (text && !text.includes('not found') && !text.includes('404') && !text.includes('Error')) {
-            const lines = text.split('\n');
-            const cleanLines = lines.filter(l => !l.startsWith('!!') && !l.toLowerCase().includes('untrusted content') && !l.toLowerCase().includes('written by other agents'));
-            fetchedNote = cleanLines.join(' ').replace(/^["']|["']$/g, '').trim();
-            if (fetchedNote) {
-              setNoteContent(fetchedNote);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('KV note fetch failed:', e);
+      // 2. Fetch real KV Note from Technocore Store (Sharded + Legacy)
+      const fetchedNote = await readKvNote(parsed.fingerprint);
+      if (fetchedNote) {
+        setNoteContent(fetchedNote);
       }
 
       // 3. Query Technocore room verification

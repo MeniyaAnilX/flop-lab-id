@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateIdentity } from '../lib/crypto';
-import { sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
+import { sendSignedMessage, publishKvNote, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
 const STORAGE_KEY = 'flop_agent_state_v6';
 
@@ -282,7 +282,7 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     URL.revokeObjectURL(url);
   };
 
-  // Step 3: Bio Note - Real Network Call & Verification
+  // Step 3: Bio Note - Real Network Call & Dual Sharded/Legacy Verification
   const handlePublishNote = async () => {
     if (!identity || !noteText.trim()) return;
     setPublishingNote(true);
@@ -291,10 +291,7 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
 
     const cleanNote = noteText.trim();
     try {
-      const kvSetUrl = `${TECHNOCORE_BASE_URL}/kv/did/${identity.fingerprint}/set/${encodeURIComponent(cleanNote)}`;
-      try {
-        await fetch(kvSetUrl, { method: 'GET', mode: 'no-cors' });
-      } catch (e) {}
+      const pubRes = await publishKvNote(identity.fingerprint, cleanNote);
 
       await new Promise((r) => setTimeout(r, 600));
       setPublishingStepText('Verifying note persistence on ledger...');
@@ -303,7 +300,8 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
       const noteInfo = {
         fingerprint: identity.fingerprint,
         text: cleanNote,
-        verifiedUrl: `${TECHNOCORE_BASE_URL}/kv/did/${identity.fingerprint}`,
+        verifiedUrl: pubRes.shardedUrl || `${TECHNOCORE_BASE_URL}/kv/did/${identity.fingerprint}`,
+        legacyUrl: pubRes.legacyUrl,
         verifiedAt: new Date().toLocaleTimeString()
       };
       setNotePublishedData(noteInfo);

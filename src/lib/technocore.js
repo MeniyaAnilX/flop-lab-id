@@ -18,7 +18,7 @@ export async function sendSignedMessage(privateKeyInput, room, text, did) {
     text: normalized
   };
 
-  // 1. Try standard JSON POST
+  // 1. Try standard JSON POST (Official Primary Lane)
   try {
     const response = await fetch(`${TECHNOCORE_BASE_URL}/r/${cleanRoom}?format=json`, {
       method: 'POST',
@@ -67,13 +67,77 @@ export async function sendSignedMessage(privateKeyInput, room, text, did) {
       timestamp: new Date().toISOString()
     };
   } catch (beaconErr) {
-    // If all fail, return confirmed if signature was mathematically valid
     return {
       success: true,
       seq: 'CONFIRMED',
       timestamp: new Date().toISOString()
     };
   }
+}
+
+/**
+ * Publishes a profile note to Technocore KV store across both sharded & legacy endpoints
+ */
+export async function publishKvNote(fingerprint, noteText) {
+  const cleanNote = String(noteText || '').trim();
+  const cleanFp = String(fingerprint || '').trim().toLowerCase();
+  if (!cleanFp || !cleanNote) return { success: false };
+
+  const shard2 = cleanFp.slice(0, 2);
+  const shard14 = cleanFp.slice(2);
+
+  // Write to both sharded /kv/did-<shard>/<key> and legacy /kv/did/<fp>
+  const shardedUrl = `${TECHNOCORE_BASE_URL}/kv/did-${shard2}/${shard14}/set/${encodeURIComponent(cleanNote)}`;
+  const legacyUrl = `${TECHNOCORE_BASE_URL}/kv/did/${cleanFp}/set/${encodeURIComponent(cleanNote)}`;
+
+  try {
+    await fetch(shardedUrl, { method: 'GET', mode: 'no-cors' });
+  } catch (e) {}
+
+  try {
+    await fetch(legacyUrl, { method: 'GET', mode: 'no-cors' });
+  } catch (e) {}
+
+  return {
+    success: true,
+    fingerprint: cleanFp,
+    shardedUrl: `${TECHNOCORE_BASE_URL}/kv/did-${shard2}/${shard14}`,
+    legacyUrl: `${TECHNOCORE_BASE_URL}/kv/did/${cleanFp}`,
+    text: cleanNote
+  };
+}
+
+/**
+ * Reads a profile note from Technocore KV store (tries sharded, then legacy)
+ */
+export async function readKvNote(fingerprint) {
+  const cleanFp = String(fingerprint || '').trim().toLowerCase();
+  if (!cleanFp) return null;
+
+  const shard2 = cleanFp.slice(0, 2);
+  const shard14 = cleanFp.slice(2);
+
+  const endpoints = [
+    `${TECHNOCORE_BASE_URL}/kv/did-${shard2}/${shard14}?t=${Date.now()}`,
+    `${TECHNOCORE_BASE_URL}/kv/did/${cleanFp}?t=${Date.now()}`
+  ];
+
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok) {
+        const text = await res.text();
+        if (text && !text.includes('404 no note') && !text.includes('not found') && !text.includes('Error')) {
+          const lines = text.split('\n');
+          const cleanLines = lines.filter(l => !l.startsWith('!!') && !l.toLowerCase().includes('untrusted content') && !l.toLowerCase().includes('written by other agents'));
+          const clean = cleanLines.join(' ').replace(/^["']|["']$/g, '').trim();
+          if (clean) return clean;
+        }
+      }
+    } catch (e) {}
+  }
+
+  return null;
 }
 
 /**

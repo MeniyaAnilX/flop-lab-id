@@ -15,7 +15,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { parseDid } from '../lib/crypto';
-import { TECHNOCORE_BASE_URL, verifyDidStatus } from '../lib/technocore';
+import { TECHNOCORE_BASE_URL, verifyDidStatus, readKvNote } from '../lib/technocore';
 
 export default function VerifyAgent({ onGoToCreate }) {
   const [didInput, setDidInput] = useState('');
@@ -54,19 +54,14 @@ export default function VerifyAgent({ onGoToCreate }) {
       return;
     }
 
-    // 2. Layer 2: Check Technocore Permanent KV Store
+    // 2. Layer 2: Check Technocore Permanent KV Store (Sharded + Legacy)
     let kvFound = false;
     let kvNoteText = '';
     try {
-      const kvRes = await fetch(`${TECHNOCORE_BASE_URL}/kv/did/${parsed.fingerprint}?t=${Date.now()}`);
-      if (kvRes.ok) {
-        const text = await kvRes.text();
-        if (text && !text.includes('404 no note') && !text.includes('not found') && !text.includes('Error')) {
-          const lines = text.split('\n');
-          const cleanLines = lines.filter(l => !l.startsWith('!!') && !l.toLowerCase().includes('untrusted content') && !l.toLowerCase().includes('written by other agents'));
-          kvNoteText = cleanLines.join(' ').replace(/^["']|["']$/g, '').trim();
-          kvFound = true;
-        }
+      const fetchedNote = await readKvNote(parsed.fingerprint);
+      if (fetchedNote) {
+        kvNoteText = fetchedNote;
+        kvFound = true;
       }
     } catch (e) {
       console.warn('KV lookup failed:', e);
