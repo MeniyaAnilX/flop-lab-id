@@ -24,7 +24,7 @@ import {
   Layers
 } from 'lucide-react';
 import { fetchRoomMessages, sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
-import { getAgentVisuals, generateIdentity, restoreFromSeed } from '../lib/crypto';
+import { getAgentVisuals, generateIdentity, restoreFromSeed, decryptKeyWithPassphrase } from '../lib/crypto';
 
 const STORAGE_KEY = 'flop_agent_state_v6';
 
@@ -63,6 +63,7 @@ export default function ChatRooms({ onGoToCreate }) {
   const [existingMethod, setExistingMethod] = useState('seed'); // 'file' | 'seed'
   const [importSeed, setImportSeed] = useState('');
   const [importJsonText, setImportJsonText] = useState('');
+  const [importPassphrase, setImportPassphrase] = useState('');
   const [importError, setImportError] = useState(null);
   const [importSuccess, setImportSuccess] = useState(false);
 
@@ -161,7 +162,7 @@ export default function ChatRooms({ onGoToCreate }) {
   };
 
   // Handle Restore for Old Users (Seed / File)
-  const handleImportIdentity = (e) => {
+  const handleImportIdentity = async (e) => {
     e.preventDefault();
     setImportError(null);
 
@@ -177,9 +178,16 @@ export default function ChatRooms({ onGoToCreate }) {
       } else if (existingMethod === 'file') {
         if (!importJsonText.trim()) throw new Error('Please paste your credential backup file content');
         const parsed = JSON.parse(importJsonText.trim());
-        const seed = parsed.seed_64hex || parsed.seed || parsed.privateKey;
-        if (!seed) throw new Error('Could not parse seed_64hex from JSON backup data');
-        restored = restoreFromSeed(seed);
+        if (parsed.format === 'flop_keyseal_v1' || parsed.ciphertext) {
+          if (!importPassphrase.trim()) {
+            throw new Error('This is an encrypted KeySeal backup. Please enter your 8-digit passphrase below.');
+          }
+          restored = await decryptKeyWithPassphrase(parsed, importPassphrase.trim());
+        } else {
+          const seed = parsed.seed_64hex || parsed.seed || parsed.privateKey;
+          if (!seed) throw new Error('Could not parse seed_64hex from JSON backup data');
+          restored = restoreFromSeed(seed);
+        }
       }
 
       if (restored) {
@@ -196,6 +204,7 @@ export default function ChatRooms({ onGoToCreate }) {
           setShowIdentityModal(false);
           setImportSeed('');
           setImportJsonText('');
+          setImportPassphrase('');
         }, 1000);
       }
     } catch (err) {
@@ -594,6 +603,19 @@ export default function ChatRooms({ onGoToCreate }) {
                     placeholder="or paste raw backup JSON contents here..."
                     className="w-full px-3.5 py-2 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white resize-none"
                   />
+
+                  <div className="pt-1">
+                    <label className="block text-[10px] text-hacker-muted uppercase font-bold tracking-wider mb-1">
+                      PASSPHRASE / PASSWORD (REQUIRED FOR ENCRYPTED KEYSEAL .JSON):
+                    </label>
+                    <input
+                      type="password"
+                      value={importPassphrase}
+                      onChange={(e) => setImportPassphrase(e.target.value)}
+                      placeholder="Enter 8+ digit password if backup is encrypted..."
+                      className="w-full px-3.5 py-2 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                    />
+                  </div>
                 </div>
               )}
 

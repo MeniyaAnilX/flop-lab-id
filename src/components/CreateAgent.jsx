@@ -27,7 +27,7 @@ import {
   Activity
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { generateIdentity, restoreFromSeed } from '../lib/crypto';
+import { generateIdentity, restoreFromSeed, encryptKeyWithPassphrase, decryptKeyWithPassphrase } from '../lib/crypto';
 import { sendSignedMessage, publishKvNote, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
 const STORAGE_KEY = 'flop_agent_state_v6';
@@ -246,15 +246,27 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     }
   };
 
+  const [restorePassphrase, setRestorePassphrase] = useState('');
+  const [keysealPassphrase, setKeysealPassphrase] = useState('');
+  const [keysealError, setKeysealError] = useState(null);
+
   // Step 1: Restore Existing Key (for Old Users)
-  const handleRestoreIdentity = (e) => {
+  const handleRestoreIdentity = async (e) => {
     e?.preventDefault();
     setRestoreError(null);
     try {
       let seedHex = restoreSeedText.trim();
       if (seedHex.startsWith('{')) {
         const parsed = JSON.parse(seedHex);
-        seedHex = parsed.seed_64hex || parsed.seed || parsed.privateKey || '';
+        if (parsed.format === 'flop_keyseal_v1' || parsed.ciphertext) {
+          if (!restorePassphrase) {
+            throw new Error('This is an encrypted KeySeal backup. Please enter your passphrase/password below.');
+          }
+          const decrypted = await decryptKeyWithPassphrase(parsed, restorePassphrase.trim());
+          seedHex = decrypted.seed64Hex;
+        } else {
+          seedHex = parsed.seed_64hex || parsed.seed || parsed.privateKey || '';
+        }
       }
       if (!seedHex) throw new Error('Please enter a 64-hex seed or valid backup JSON');
       const restored = restoreFromSeed(seedHex);
@@ -264,6 +276,31 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
       if (onAgentCreated) onAgentCreated(restored);
     } catch (err) {
       setRestoreError(err.message || 'Invalid 64-hex seed or backup JSON');
+    }
+  };
+
+  // Step 2: KeySeal 8-Digit Encrypted JSON Download
+  const handleDownloadKeySeal = async () => {
+    if (!identity) return;
+    setKeysealError(null);
+    const pass = keysealPassphrase.trim();
+    if (!pass || pass.length < 6) {
+      setKeysealError('Please enter at least 8 characters (or 6+ minimum) for your vault password.');
+      return;
+    }
+
+    try {
+      const encryptedPkg = await encryptKeyWithPassphrase(identity.seed64Hex, pass, identity.did);
+      const blob = new Blob([JSON.stringify(encryptedPkg, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `flop_keyseal_${identity.fingerprint}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setSeedSavedConfirmed(true);
+    } catch (err) {
+      setKeysealError(err.message || 'Encryption failed');
     }
   };
 
@@ -767,7 +804,48 @@ Positioned and ready for $FLOP.` : '';
                 </p>
               </div>
 
-              {/* Action Downloads */}
+              {/* KeySeal 8-Digit Password Protection (Recommended) */}
+              <div className="p-3.5 rounded-xl bg-black border border-white/20 space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-white uppercase flex items-center gap-1.5">
+                    <Lock className="w-3 h-3 text-hacker-green" />
+                    <span>KeySeal 8-Digit Vault Encryption (Recommended):</span>
+                  </span>
+                  <span className="text-[10px] text-hacker-green font-bold">AES-GCM-256</span>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <input
+                    type="password"
+                    value={keysealPassphrase}
+                    onChange={(e) => {
+                      setKeysealPassphrase(e.target.value);
+                      if (keysealError) setKeysealError(null);
+                    }}
+                    placeholder="Enter 8+ digit password to seal key..."
+                    className="w-full flex-1 px-3.5 py-2 rounded-xl bg-[#09090b] border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadKeySeal}
+                    className="w-full sm:w-auto btn-white px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 whitespace-nowrap shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download KeySeal (.json)</span>
+                  </button>
+                </div>
+
+                {keysealError && (
+                  <p className="text-xs text-red-400 font-bold">{keysealError}</p>
+                )}
+                
+                <span className="text-[10px] text-hacker-muted block">
+                  Encrypts your secret seed with PBKDF2 (100,000 rounds) so only you can unlock this agent with your password.
+                </span>
+              </div>
+
+              {/* Standard Downloads */}
               <div className="flex items-center gap-2 flex-wrap pt-1">
                 <button
                   onClick={handleDownloadTxt}
@@ -782,7 +860,7 @@ Positioned and ready for $FLOP.` : '';
                   className="btn-outline px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 text-white"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Download .json</span>
+                  <span>Plain .json</span>
                 </button>
 
                 {!seedSavedConfirmed && (
