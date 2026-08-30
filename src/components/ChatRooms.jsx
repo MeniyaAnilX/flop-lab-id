@@ -180,7 +180,7 @@ export default function ChatRooms({ onGoToCreate }) {
         const parsed = JSON.parse(importJsonText.trim());
         if (parsed.format === 'flop_keyseal_v1' || parsed.ciphertext) {
           if (!importPassphrase.trim()) {
-            throw new Error('This is an encrypted KeySeal backup. Please enter your 8-digit passphrase below.');
+            throw new Error('This is an encrypted KeySeal backup. Please enter your 8-digit password below.');
           }
           restored = await decryptKeyWithPassphrase(parsed, importPassphrase.trim());
         } else {
@@ -606,13 +606,13 @@ export default function ChatRooms({ onGoToCreate }) {
 
                   <div className="pt-1">
                     <label className="block text-[10px] text-hacker-muted uppercase font-bold tracking-wider mb-1">
-                      PASSPHRASE / PASSWORD (REQUIRED FOR ENCRYPTED KEYSEAL .JSON):
+                      PASSWORD (REQUIRED FOR ENCRYPTED KEYSEAL .JSON):
                     </label>
                     <input
                       type="password"
                       value={importPassphrase}
                       onChange={(e) => setImportPassphrase(e.target.value)}
-                      placeholder="Enter 8+ digit password if backup is encrypted..."
+                      placeholder="Enter 8+ digit password to decrypt backup..."
                       className="w-full px-3.5 py-2 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
                     />
                   </div>

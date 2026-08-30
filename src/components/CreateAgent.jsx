@@ -231,31 +231,31 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
   };
 
   const [creationTab, setCreationTab] = useState('new'); // 'new' | 'restore'
-  const [passphrase, setPassphrase] = useState('');
-  const [repeatPassphrase, setRepeatPassphrase] = useState('');
-  const [passphraseError, setPassphraseError] = useState(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [repeatPasswordInput, setRepeatPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(null);
   const [encryptedKeyPackage, setEncryptedKeyPackage] = useState(null);
 
   const [restoreSeedText, setRestoreSeedText] = useState('');
-  const [restorePassphrase, setRestorePassphrase] = useState('');
+  const [restorePassword, setRestorePassword] = useState('');
   const [restoreError, setRestoreError] = useState(null);
 
-  // Step 1: Create Key with Mandatory Passphrase
+  // Step 1: Create Key with Mandatory Password
   const handleCreateIdentity = async (e) => {
     e?.preventDefault();
-    setPassphraseError(null);
+    setPasswordError(null);
     setError(null);
 
-    const pass = passphrase.trim();
-    const repeat = repeatPassphrase.trim();
+    const pass = passwordInput.trim();
+    const repeat = repeatPasswordInput.trim();
 
     if (!pass || pass.length < 8) {
-      setPassphraseError('Passphrase must be at least 8 characters long.');
+      setPasswordError('Password must be at least 8 characters long.');
       return;
     }
 
     if (pass !== repeat) {
-      setPassphraseError('Passphrases do not match. Please verify.');
+      setPasswordError('Passwords do not match. Please verify.');
       return;
     }
 
@@ -268,7 +268,7 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
 
       if (onAgentCreated) onAgentCreated(newIdentity);
     } catch (err) {
-      setPassphraseError(err.message || 'Failed to generate and seal key');
+      setPasswordError(err.message || 'Failed to generate and seal key');
     }
   };
 
@@ -281,10 +281,10 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
       if (seedHex.startsWith('{')) {
         const parsed = JSON.parse(seedHex);
         if (parsed.format === 'flop_keyseal_v1' || parsed.ciphertext) {
-          if (!restorePassphrase) {
-            throw new Error('This is an encrypted KeySeal backup. Please enter your passphrase/password below.');
+          if (!restorePassword) {
+            throw new Error('This is an encrypted KeySeal backup. Please enter your 8-digit password below.');
           }
-          const decrypted = await decryptKeyWithPassphrase(parsed, restorePassphrase.trim());
+          const decrypted = await decryptKeyWithPassphrase(parsed, restorePassword.trim());
           seedHex = decrypted.seed64Hex;
         } else {
           seedHex = parsed.seed_64hex || parsed.seed || parsed.privateKey || '';
@@ -294,7 +294,6 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
       const restored = restoreFromSeed(seedHex);
       setIdentity(restored);
       setSeedSavedConfirmed(true);
-      setShowRestoreBox(false);
       if (onAgentCreated) onAgentCreated(restored);
     } catch (err) {
       setRestoreError(err.message || 'Invalid 64-hex seed or backup JSON');
@@ -307,7 +306,7 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     try {
       let pkg = encryptedKeyPackage;
       if (!pkg) {
-        const pass = passphrase.trim() || 'default_passphrase_8chars';
+        const pass = passwordInput.trim() || 'default_password_8chars';
         pkg = await encryptKeyWithPassphrase(identity.seed64Hex, pass, identity.did);
       }
       const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
@@ -604,7 +603,7 @@ Just generated my cryptographic Ed25519 identity:
 Agent DID:
 ${identity.did}${contribDone?.url ? `\n\nPublic Contribution:\n${contribDone.url}` : ''}
 
-Positioned and ready for $FLOP.` : '';
+Verified and active for Flop Labs Autonomous Agent Economy.` : '';
 
   const tweetIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
 
@@ -640,7 +639,7 @@ Positioned and ready for $FLOP.` : '';
           Create Your <span className="text-hacker-dim underline decoration-white/30 underline-offset-8">AI Agent Identity</span>
         </h1>
         <p className="text-hacker-muted max-w-xl mx-auto mt-3 text-xs md:text-sm leading-relaxed">
-          Generate an authentic decentralized ID for your bot in 2 minutes, record your public work, and qualify for the upcoming $FLOP airdrop.
+          Generate an authentic decentralized ID for your bot in 2 minutes, record your public work, and participate in the decentralized Flop Labs autonomous agent ecosystem.
         </p>
       </div>
 
@@ -659,7 +658,7 @@ Positioned and ready for $FLOP.` : '';
             <Lock className="w-4 h-4 text-amber-400" />
             <span>2. Private Secret Key</span>
           </div>
-          <p className="text-[11px] text-hacker-muted">Your password. Never share it. Needed to claim airdrop rewards.</p>
+          <p className="text-[11px] text-hacker-muted">Your private password. Never share it. Needed to authenticate your agent.</p>
         </div>
 
         <div className="hacker-panel p-4 rounded-2xl">
@@ -722,7 +721,7 @@ Positioned and ready for $FLOP.` : '';
                   type="button"
                   onClick={() => {
                     setCreationTab('new');
-                    setPassphraseError(null);
+                    setPasswordError(null);
                     setRestoreError(null);
                   }}
                   className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
@@ -739,7 +738,7 @@ Positioned and ready for $FLOP.` : '';
                   type="button"
                   onClick={() => {
                     setCreationTab('restore');
-                    setPassphraseError(null);
+                    setPasswordError(null);
                     setRestoreError(null);
                   }}
                   className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
@@ -767,41 +766,41 @@ Positioned and ready for $FLOP.` : '';
                   <div className="space-y-2.5">
                     <div className="space-y-1">
                       <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
-                        MASTER PASSPHRASE (MINIMUM 8 CHARACTERS):
+                        MASTER PASSWORD (MINIMUM 8 CHARACTERS):
                       </label>
                       <input
                         type="password"
-                        value={passphrase}
+                        value={passwordInput}
                         onChange={(e) => {
-                          setPassphrase(e.target.value);
-                          if (passphraseError) setPassphraseError(null);
+                          setPasswordInput(e.target.value);
+                          if (passwordError) setPasswordError(null);
                         }}
-                        placeholder="Strong passphrase · minimum 8 characters"
+                        placeholder="Strong password · minimum 8 characters"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
                       />
                     </div>
 
                     <div className="space-y-1">
                       <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
-                        REPEAT PASSPHRASE:
+                        REPEAT PASSWORD:
                       </label>
                       <input
                         type="password"
-                        value={repeatPassphrase}
+                        value={repeatPasswordInput}
                         onChange={(e) => {
-                          setRepeatPassphrase(e.target.value);
-                          if (passphraseError) setPassphraseError(null);
+                          setRepeatPasswordInput(e.target.value);
+                          if (passwordError) setPasswordError(null);
                         }}
-                        placeholder="Repeat passphrase"
+                        placeholder="Repeat password"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
                       />
                     </div>
                   </div>
 
-                  {passphraseError && (
+                  {passwordError && (
                     <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold flex items-center gap-2 animate-fadeIn">
                       <ShieldAlert className="w-4 h-4 flex-shrink-0" />
-                      <span>{passphraseError}</span>
+                      <span>{passwordError}</span>
                     </div>
                   )}
 
@@ -834,13 +833,13 @@ Positioned and ready for $FLOP.` : '';
 
                     <div className="space-y-1">
                       <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
-                        PASSPHRASE (IF BACKUP IS ENCRYPTED):
+                        PASSWORD (IF BACKUP IS ENCRYPTED):
                       </label>
                       <input
                         type="password"
-                        value={restorePassphrase}
-                        onChange={(e) => setRestorePassphrase(e.target.value)}
-                        placeholder="Enter 8-digit passphrase..."
+                        value={restorePassword}
+                        onChange={(e) => setRestorePassword(e.target.value)}
+                        placeholder="Enter 8-digit password..."
                         className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
                       />
                     </div>

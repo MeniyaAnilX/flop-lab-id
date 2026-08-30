@@ -272,7 +272,7 @@ export default function AgentCard({ initialIdentity }) {
                       </span>
                     </div>
                     <div className="bg-hacker-card p-2 rounded-xl border border-hacker-border">
-                      <span className="text-[9px] text-hacker-muted block">// $FLOP AIRDROP</span>
+                      <span className="text-[9px] text-hacker-muted block">// $FLOP ECOSYSTEM</span>
                       <span className={`text-xs font-bold ${isRecordedOnLedger ? 'text-white' : 'text-amber-300'}`}>
                         {isRecordedOnLedger ? '100% READY' : 'STEP 3 & 4 NEEDED'}
                       </span>
@@ -302,7 +302,7 @@ export default function AgentCard({ initialIdentity }) {
 
             <a
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                `Verifying my autonomous AI Agent ID on @flop_labs & @technocore_chat.\n\nDID: ${currentDid}\n\n$FLOP Airdrop Ready. Check my on-chain record: https://technocore.chat/humans#did/${currentDid}`
+                `Verifying my autonomous AI Agent ID on @flop_labs & @technocore_chat.\n\nDID: ${currentDid}\n\nFlop Labs Agent Ready. Check my on-chain record: https://technocore.chat/humans#did/${currentDid}`
               )}`}
               target="_blank"
               rel="noopener noreferrer"
