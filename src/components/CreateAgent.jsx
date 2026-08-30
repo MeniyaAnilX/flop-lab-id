@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, 
   Key, 
@@ -24,7 +24,9 @@ import {
   Twitter,
   FileCode2,
   CheckCircle2,
-  Activity
+  Activity,
+  Upload,
+  X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateIdentity, restoreFromSeed, encryptKeyWithPassphrase, decryptKeyWithPassphrase } from '../lib/crypto';
@@ -239,6 +241,23 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
   const [restoreSeedText, setRestoreSeedText] = useState('');
   const [restorePassword, setRestorePassword] = useState('');
   const [restoreError, setRestoreError] = useState(null);
+  const [uploadedFileName, setUploadedFileName] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleJsonFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadedFileName(file.name);
+    setRestoreError(null);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      if (typeof text === 'string') {
+        setRestoreSeedText(text);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // Step 1: Create Key with Mandatory Password
   const handleCreateIdentity = async (e) => {
@@ -827,6 +846,47 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
               {/* TAB 2: RESTORE EXISTING KEY */}
               {creationTab === 'restore' && (
                 <div className="space-y-3 animate-fadeIn">
+                  {/* File Upload Box */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={handleJsonFileUpload}
+                    className="hidden"
+                  />
+
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border border-dashed border-hacker-border hover:border-white p-3 rounded-xl bg-black flex items-center justify-between gap-3 cursor-pointer transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-white/5 group-hover:bg-white text-hacker-muted group-hover:text-black flex items-center justify-center transition-all">
+                        <Upload className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white">
+                          {uploadedFileName ? uploadedFileName : 'Upload Backup JSON Document'}
+                        </p>
+                        <p className="text-[10px] text-hacker-muted">
+                          {uploadedFileName ? 'File loaded! Enter password below to unlock.' : 'Click to select your flop_keyseal_*.json file'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-lg bg-white/10 text-white text-[11px] font-bold group-hover:bg-white group-hover:text-black transition-all cursor-pointer"
+                    >
+                      {uploadedFileName ? 'Change' : 'Browse File'}
+                    </button>
+                  </div>
+
+                  <div className="relative flex py-1 items-center">
+                    <div className="flex-grow border-t border-hacker-border"></div>
+                    <span className="flex-shrink mx-2 text-[10px] text-hacker-muted uppercase">OR PASTE DIRECTLY</span>
+                    <div className="flex-grow border-t border-hacker-border"></div>
+                  </div>
+
                   <div className="space-y-2.5">
                     <div className="space-y-1">
                       <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
@@ -835,7 +895,10 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
                       <textarea
                         rows={2}
                         value={restoreSeedText}
-                        onChange={(e) => setRestoreSeedText(e.target.value)}
+                        onChange={(e) => {
+                          setRestoreSeedText(e.target.value);
+                          if (uploadedFileName) setUploadedFileName(null);
+                        }}
                         placeholder="Paste 64-hex seed or exported backup JSON content..."
                         className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white resize-none"
                       />
