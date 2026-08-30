@@ -1,4 +1,4 @@
-import { ed25519 } from '@noble/curves/ed25519';
+import { ed25519, x25519, edwardsToMontgomeryPub, edwardsToMontgomeryPriv } from '@noble/curves/ed25519';
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex, hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
 
@@ -325,4 +325,113 @@ export function base64UrlDecode(str) {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
+}
+
+/**
+ * Extract 32-byte Ed25519 Public Key from did:key
+ */
+export function extractPublicKeyFromDid(did) {
+  if (!did) throw new Error('DID is required');
+  let clean = did.trim();
+  if (clean.startsWith('did:key:')) {
+    clean = clean.replace('did:key:', '');
+  }
+  if (clean.startsWith('z')) {
+    clean = clean.slice(1);
+  }
+  const decoded = base58Decode(clean);
+  if (decoded[0] === 0xed && decoded[1] === 0x01) {
+    return decoded.slice(2, 34);
+  }
+  return decoded.slice(0, 32);
+}
+
+/**
+ * Encrypt a Direct Message between 2 Agents using X25519 ECDH + AES-GCM-256
+ */
+export async function encryptDirectMessage(senderSeed64Hex, recipientDid, plaintext) {
+  if (!senderSeed64Hex || !recipientDid || !plaintext) {
+    throw new Error('Sender seed, recipient DID, and message text are required.');
+  }
+
+  // 1. Get sender private key & convert to X25519
+  const senderPriv = hexToBytes(senderSeed64Hex);
+  const senderXPriv = edwardsToMontgomeryPriv(senderPriv);
+
+  // 2. Extract recipient Ed25519 pubkey & convert to X25519
+  const recipientEdPub = extractPublicKeyFromDid(recipientDid);
+  const recipientXPub = edwardsToMontgomeryPub(recipientEdPub);
+
+  // 3. Compute Diffie-Hellman Shared Secret (32 bytes)
+  const sharedSecret = x25519.getSharedSecret(senderXPriv, recipientXPub);
+
+  // 4. Derive AES-GCM-256 Key
+  const aesKey = await crypto.subtle.importKey(
+    'raw',
+    sharedSecret,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
+
+  // 5. Generate 12-byte IV & Encrypt
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encryptedBuf = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: iv },
+    aesKey,
+    utf8ToBytes(plaintext)
+  );
+
+  return {
+    format: 'flop_e2ee_v1',
+    recipientDid: recipientDid.trim(),
+    iv: base64UrlEncode(iv),
+    ciphertext: base64UrlEncode(new Uint8Array(encryptedBuf)),
+    timestamp: new Date().toISOString()
+  };
+}
+
+/**
+ * Decrypt a Direct Message between 2 Agents using X25519 ECDH + AES-GCM-256
+ */
+export async function decryptDirectMessage(recipientSeed64Hex, senderDid, e2eePayload) {
+  if (!recipientSeed64Hex || !senderDid || !e2eePayload) {
+    throw new Error('Recipient seed, sender DID, and encrypted payload are required.');
+  }
+
+  const payload = typeof e2eePayload === 'string' ? JSON.parse(e2eePayload) : e2eePayload;
+  if (!payload.ciphertext || !payload.iv) {
+    throw new Error('Invalid E2EE payload.');
+  }
+
+  // 1. Get recipient private key & convert to X25519
+  const recipientPriv = hexToBytes(recipientSeed64Hex);
+  const recipientXPriv = edwardsToMontgomeryPriv(recipientPriv);
+
+  // 2. Extract sender Ed25519 pubkey & convert to X25519
+  const senderEdPub = extractPublicKeyFromDid(senderDid);
+  const senderXPub = edwardsToMontgomeryPub(senderEdPub);
+
+  // 3. Compute Diffie-Hellman Shared Secret (32 bytes)
+  const sharedSecret = x25519.getSharedSecret(recipientXPriv, senderXPub);
+
+  // 4. Derive AES-GCM-256 Key
+  const aesKey = await crypto.subtle.importKey(
+    'raw',
+    sharedSecret,
+    { name: 'AES-GCM' },
+    false,
+    ['decrypt']
+  );
+
+  const iv = base64UrlDecode(payload.iv);
+  const ciphertext = base64UrlDecode(payload.ciphertext);
+
+  const decryptedBuf = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: iv },
+    aesKey,
+    ciphertext
+  );
+
+  return new TextDecoder().decode(decryptedBuf);
 }

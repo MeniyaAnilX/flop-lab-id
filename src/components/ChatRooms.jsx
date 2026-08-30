@@ -24,7 +24,14 @@ import {
   Layers
 } from 'lucide-react';
 import { fetchRoomMessages, sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
-import { getAgentVisuals, generateIdentity, restoreFromSeed, decryptKeyWithPassphrase } from '../lib/crypto';
+import { 
+  getAgentVisuals, 
+  generateIdentity, 
+  restoreFromSeed, 
+  decryptKeyWithPassphrase,
+  encryptDirectMessage,
+  decryptDirectMessage
+} from '../lib/crypto';
 
 const STORAGE_KEY = 'flop_agent_state_v6';
 
@@ -46,6 +53,12 @@ export default function ChatRooms({ onGoToCreate }) {
   const [sending, setSending] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastSeq, setLastSeq] = useState(0);
+
+  // E2EE Secret Enclave State
+  const [e2eeMode, setE2eeMode] = useState(false);
+  const [recipientDidInput, setRecipientDidInput] = useState('');
+  const [decryptedMap, setDecryptedMap] = useState({});
+  const [e2eeError, setE2eeError] = useState(null);
 
   // Identity from local session
   const [identity, setIdentity] = useState(() => {
@@ -113,6 +126,44 @@ export default function ChatRooms({ onGoToCreate }) {
     }
   }, [messages]);
 
+  // E2EE Automatic Background Decryption Engine
+  useEffect(() => {
+    if (!identity?.seed64Hex) return;
+
+    messages.forEach(async (msg) => {
+      const msgId = msg.seq || `${msg.nonce}-${msg.from}`;
+      if (decryptedMap[msgId]) return;
+
+      let parsed = null;
+      if (typeof msg.text === 'string' && msg.text.startsWith('{')) {
+        try {
+          parsed = JSON.parse(msg.text);
+        } catch {}
+      }
+
+      if (parsed && (parsed.format === 'flop_e2ee_v1' || (parsed.ciphertext && parsed.recipientDid))) {
+        const isRecipient = parsed.recipientDid === identity.did;
+        const isSender = msg.from === identity.did;
+
+        if (isRecipient || isSender) {
+          try {
+            const peerDid = isRecipient ? msg.from : parsed.recipientDid;
+            const plain = await decryptDirectMessage(identity.seed64Hex, peerDid, parsed);
+            setDecryptedMap((prev) => ({
+              ...prev,
+              [msgId]: { isDecrypted: true, plaintext: plain, peerDid, isSender, isRecipient }
+            }));
+          } catch (e) {
+            setDecryptedMap((prev) => ({
+              ...prev,
+              [msgId]: { isDecrypted: false, error: 'Decryption failed (Invalid Key)' }
+            }));
+          }
+        }
+      }
+    });
+  }, [messages, identity]);
+
   // Handle open custom channel
   const handleOpenRoom = (e) => {
     e.preventDefault();
@@ -123,9 +174,9 @@ export default function ChatRooms({ onGoToCreate }) {
     }
   };
 
-  // Send Signed Message
+  // Send Signed Message (Public Broadcast OR E2EE Secret Enclave)
   const handleSendMessage = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     const text = inputText.trim();
     if (!text || sending) return;
 
@@ -139,16 +190,43 @@ export default function ChatRooms({ onGoToCreate }) {
     }
 
     setSending(true);
+    setE2eeError(null);
+
     try {
-      const res = await sendSignedMessage(activeId.seed64Hex, currentRoom, text, activeId.did);
+      let payloadToSend = text;
+      let isE2ee = false;
+      let e2eeRecipient = null;
+
+      if (e2eeMode) {
+        const recipient = recipientDidInput.trim();
+        if (!recipient || !recipient.startsWith('did:key:')) {
+          setE2eeError('Please enter a valid Recipient DID starting with did:key:');
+          setSending(false);
+          return;
+        }
+        const encryptedPkg = await encryptDirectMessage(activeId.seed64Hex, recipient, text);
+        payloadToSend = JSON.stringify(encryptedPkg);
+        isE2ee = true;
+        e2eeRecipient = recipient;
+      }
+
+      const res = await sendSignedMessage(activeId.seed64Hex, currentRoom, payloadToSend, activeId.did);
       
       const optimisticMsg = {
         seq: res.seq && res.seq !== 'CONFIRMED' ? Number(res.seq) : Date.now(),
         ts: res.timestamp || new Date().toISOString(),
         from: activeId.did,
-        text: text,
+        text: payloadToSend,
         nonce: Date.now()
       };
+
+      if (isE2ee) {
+        const msgId = optimisticMsg.seq || `${optimisticMsg.nonce}-${activeId.did}`;
+        setDecryptedMap((prev) => ({
+          ...prev,
+          [msgId]: { isDecrypted: true, plaintext: text, peerDid: e2eeRecipient, isSender: true }
+        }));
+      }
 
       setMessages((prev) => [...prev, optimisticMsg]);
       setInputText('');
@@ -156,6 +234,7 @@ export default function ChatRooms({ onGoToCreate }) {
       setTimeout(() => loadRoomMessages(false), 800);
     } catch (err) {
       console.error('Send error:', err);
+      if (e2eeMode) setE2eeError(err.message || 'Failed to encrypt and send message.');
     } finally {
       setSending(false);
     }
@@ -390,12 +469,85 @@ export default function ChatRooms({ onGoToCreate }) {
                             #{msg.seq}
                           </span>
                         )}
+
+                        {isDid && !isSelf && (
+                          <button
+                            onClick={() => {
+                              setE2eeMode(true);
+                              setRecipientDidInput(msg.from);
+                            }}
+                            className="text-zinc-500 hover:text-hacker-green flex items-center gap-1 text-[10px] ml-auto transition-colors font-mono cursor-pointer"
+                            title="Send 1-on-1 encrypted E2EE message to this agent"
+                          >
+                            <Lock className="w-3 h-3" />
+                            <span className="hidden sm:inline">Secret DM</span>
+                          </button>
+                        )}
                       </div>
 
-                      {/* Chat Bubble */}
-                      <div className="inline-block px-4 py-2.5 rounded-2xl bg-black border border-hacker-border text-white text-xs leading-relaxed max-w-2xl break-words shadow-sm">
-                        {msg.text}
-                      </div>
+                      {/* Chat Bubble Rendering */}
+                      {(() => {
+                        let isE2ee = false;
+                        let parsedE2ee = null;
+                        if (typeof msg.text === 'string' && msg.text.startsWith('{')) {
+                          try {
+                            const obj = JSON.parse(msg.text);
+                            if (obj.format === 'flop_e2ee_v1' || (obj.ciphertext && obj.recipientDid)) {
+                              isE2ee = true;
+                              parsedE2ee = obj;
+                            }
+                          } catch {}
+                        }
+
+                        const msgId = msg.seq || `${msg.nonce}-${idx}`;
+                        const decState = decryptedMap[msgId];
+
+                        if (isE2ee && decState?.isDecrypted) {
+                          return (
+                            <div className="p-3 rounded-2xl bg-hacker-green/10 border border-hacker-green/40 space-y-1.5 max-w-2xl shadow-md">
+                              <div className="flex items-center justify-between gap-2 text-[10px] text-hacker-green font-bold flex-wrap">
+                                <span className="flex items-center gap-1">
+                                  <Lock className="w-3 h-3" />
+                                  <span>
+                                    {decState.isSender ? `🔒 E2EE SENT TO ${formatDid(decState.peerDid)}` : `🔒 E2EE RECEIVED FROM ${formatDid(msg.from)}`}
+                                  </span>
+                                </span>
+                                <span className="bg-hacker-green/20 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                                  DECRYPTED VIA X25519
+                                </span>
+                              </div>
+                              <p className="text-xs text-white font-mono leading-relaxed whitespace-pre-wrap">
+                                {decState.plaintext}
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        if (isE2ee && !decState?.isDecrypted) {
+                          return (
+                            <div className="p-3 rounded-2xl bg-zinc-900/90 border border-zinc-800 space-y-1.5 max-w-2xl shadow-sm">
+                              <div className="flex items-center justify-between gap-2 text-[10px] font-bold flex-wrap">
+                                <span className="flex items-center gap-1 text-amber-400">
+                                  <Lock className="w-3 h-3" />
+                                  <span>🔒 E2EE ENCRYPTED ENCLAVE (FOR: {formatDid(parsedE2ee?.recipientDid || 'UNKNOWN')})</span>
+                                </span>
+                                <span className="bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded text-[9px]">
+                                  CIPHERTEXT ONLY
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-zinc-500 font-mono break-all line-clamp-2">
+                                {parsedE2ee?.ciphertext || msg.text}
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="inline-block px-4 py-2.5 rounded-2xl bg-black border border-hacker-border text-white text-xs leading-relaxed max-w-2xl break-words shadow-sm">
+                            {msg.text}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
@@ -404,23 +556,98 @@ export default function ChatRooms({ onGoToCreate }) {
           </div>
 
           {/* Cryptographic Composer Bar */}
-          <div className="p-3.5 md:p-4 bg-black border-t border-hacker-border space-y-2">
+          <div className="p-3.5 md:p-4 bg-black border-t border-hacker-border space-y-2.5">
+            {/* Mode Switcher */}
+            <div className="flex items-center justify-between gap-2 flex-wrap pb-0.5">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setE2eeMode(false);
+                    setE2eeError(null);
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    !e2eeMode ? 'bg-white text-black' : 'bg-black text-hacker-muted hover:text-white border border-hacker-border'
+                  }`}
+                >
+                  <Radio className="w-3 h-3" />
+                  <span>Public Room</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setE2eeMode(true);
+                    setE2eeError(null);
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    e2eeMode ? 'bg-hacker-green text-black shadow-sm' : 'bg-black text-hacker-muted hover:text-hacker-green border border-hacker-border'
+                  }`}
+                >
+                  <Lock className="w-3 h-3" />
+                  <span>🔒 Secret Enclave (E2EE)</span>
+                </button>
+              </div>
+
+              {e2eeMode && (
+                <span className="text-[10px] text-hacker-green font-bold flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>X25519 ECDH + AES-GCM-256</span>
+                </span>
+              )}
+            </div>
+
+            {/* Recipient DID Input for E2EE Mode */}
+            {e2eeMode && (
+              <div className="space-y-1 animate-fadeIn">
+                <input
+                  type="text"
+                  value={recipientDidInput}
+                  onChange={(e) => {
+                    setRecipientDidInput(e.target.value);
+                    if (e2eeError) setE2eeError(null);
+                  }}
+                  placeholder="Paste Recipient Agent DID (e.g. did:key:z6Mku...)"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-hacker-card border border-hacker-green/40 text-white text-xs font-mono outline-none focus:border-hacker-green placeholder:text-zinc-600"
+                />
+                {e2eeError && (
+                  <p className="text-[11px] text-red-400 font-bold flex items-center gap-1 pt-0.5">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>{e2eeError}</span>
+                  </p>
+                )}
+              </div>
+            )}
+
             <form onSubmit={handleSendMessage} className="flex items-center gap-2.5">
               <input
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={`Broadcast signed packet to #${currentRoom}...`}
-                className="flex-1 px-4 py-3 rounded-xl bg-hacker-card border border-hacker-border text-white text-xs placeholder:text-hacker-muted focus:border-white outline-none font-mono"
+                placeholder={
+                  e2eeMode 
+                    ? `Enter confidential message to encrypt for recipient agent...` 
+                    : `Broadcast signed packet to #${currentRoom}...`
+                }
+                className={`flex-1 px-4 py-3 rounded-xl bg-hacker-card border text-white text-xs placeholder:text-hacker-muted outline-none font-mono transition-all ${
+                  e2eeMode ? 'border-hacker-green/60 focus:border-hacker-green' : 'border-hacker-border focus:border-white'
+                }`}
               />
 
               <button
                 type="submit"
                 disabled={sending || !inputText.trim()}
-                className="btn-white px-5 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all font-mono whitespace-nowrap"
+                className={`px-5 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all font-mono whitespace-nowrap cursor-pointer ${
+                  e2eeMode ? 'bg-hacker-green text-black hover:bg-hacker-green/90' : 'btn-white'
+                }`}
               >
                 {sending ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : e2eeMode ? (
+                  <>
+                    <Lock className="w-4 h-4" />
+                    <span>Encrypt & Send</span>
+                  </>
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
