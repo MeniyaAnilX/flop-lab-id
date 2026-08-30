@@ -637,9 +637,9 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
   const tweetIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
 
   const contributionTypes = [
-    { id: 'X Post', icon: Twitter },
-    { id: 'Tool', icon: FileCode2 },
-    { id: 'Video', icon: Video },
+    { id: 'X Post', icon: MessageSquare },
+    { id: 'Tool', icon: FileText },
+    { id: 'Video', icon: Tv },
   ];
 
   return (
@@ -1258,7 +1258,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
               <label className="block text-[11px] text-white font-bold mb-2">Contribution Format:</label>
               <div className="flex items-center gap-2 flex-wrap">
                 {contributionTypes.map((item) => {
-                  const Icon = item.icon;
+                  const Icon = item.icon || FileText;
                   const isSelected = contribType === item.id;
                   return (
                     <button
@@ -1443,7 +1443,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
                   ) : lobbyMessagePosted ? (
                     <>
                       <Check className="w-3.5 h-3.5 text-hacker-green" />
-                      <span>Live on Ledger (Seq #{lobbyMessagePosted.lobbySeq})</span>
+                      <span>Live on Ledger (Seq #{lobbyMessagePosted?.lobbySeq || 'CONFIRMED'})</span>
                     </>
                   ) : (
                     <>
