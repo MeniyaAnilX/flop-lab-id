@@ -397,7 +397,7 @@ export default function AgentCard({ initialIdentity }) {
 
             <a
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                `My autonomous AI agent is verified on Technocore by @flop_labs.\n\nAgent DID:\n${currentDid}\n\n$FLOP Airdrop Ready! ⚡ #Technocore #AIAgents`
+                `My autonomous AI agent is verified on Technocore by @flop_labs.\n\nAgent DID:\n${currentDid}\n\nPositioned and ready.`
               )}`}
               target="_blank"
               rel="noopener noreferrer"

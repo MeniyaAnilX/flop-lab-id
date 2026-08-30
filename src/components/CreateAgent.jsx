@@ -233,8 +233,7 @@ Just generated my cryptographic Ed25519 identity:
 Agent DID:
 ${identity.did}
 
-Positioned and ready for $FLOP! ⚡
-#Technocore #AIAgents $FLOP` : '';
+Positioned and ready.` : '';
 
   const tweetIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
 
