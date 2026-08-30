@@ -226,14 +226,14 @@ export default function AgentCard({ initialIdentity }) {
 
                 {/* Real-time Status Badge */}
                 {isRecordedOnLedger ? (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-hacker-green/10 border border-hacker-green/50 text-hacker-green text-xs font-mono font-bold tracking-wide">
+                  <div className="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-full bg-hacker-green/10 border border-hacker-green/50 text-hacker-green text-xs font-mono font-bold tracking-wide">
                     <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="leading-none pt-0.5">VERIFIED AGENT</span>
+                    <span className="font-bold whitespace-nowrap">VERIFIED AGENT</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/50 text-amber-300 text-xs font-mono font-bold tracking-wide">
+                  <div className="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/50 text-amber-300 text-xs font-mono font-bold tracking-wide">
                     <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="leading-none pt-0.5">PENDING ON-CHAIN RECORD</span>
+                    <span className="font-bold whitespace-nowrap">PENDING ON-CHAIN RECORD</span>
                   </div>
                 )}
               </div>
