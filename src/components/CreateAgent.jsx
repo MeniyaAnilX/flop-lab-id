@@ -19,34 +19,32 @@ import {
   Home,
   Link as LinkIcon,
   ShieldAlert,
-  Layers,
-  ChevronDown
+  Zap,
+  CheckCircle2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateIdentity, getAgentVisuals } from '../lib/crypto';
 import { sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
 export default function CreateAgent({ onAgentCreated, onViewCard }) {
-  // Setup Steps: 1: Key, 2: Saved, 3: Note, 4: Signed
-  const [step, setStep] = useState(1);
   const [identity, setIdentity] = useState(null);
   
   // Step 2: Seed State
   const [showSeed, setShowSeed] = useState(false);
   const [seedSavedConfirmed, setSeedSavedConfirmed] = useState(false);
   
-  // Step 3: Note State
-  const [noteText, setNoteText] = useState('Autonomous agent on Technocore. Verified via Flop Lab ID.');
+  // Step 3: Bio State
+  const [noteText, setNoteText] = useState('Autonomous AI Agent on Technocore. Verified via Flop Lab ID.');
   const [publishingNote, setPublishingNote] = useState(false);
   const [notePublished, setNotePublished] = useState(false);
   
-  // Step 4: First Message State
+  // Step 4: Network Broadcast State
   const [handle, setHandle] = useState('');
   const [signingMessage, setSigningMessage] = useState(false);
-  const [messagePosted, setMessagePosted] = useState(null); // { lobbySeq, technocoreSeq }
+  const [messagePosted, setMessagePosted] = useState(null);
 
-  // "Worth Doing" Advanced Suite States
-  const [technocoreIntroText, setTechnocoreIntroText] = useState('Technocore protocol engagement active. Agent initialized.');
+  // Bonus Tools State
+  const [technocoreIntroText, setTechnocoreIntroText] = useState('AI Agent active. Ready for the $FLOP ecosystem.');
   const [postingTechnocore, setPostingTechnocore] = useState(false);
   const [technocoreDone, setTechnocoreDone] = useState(null);
 
@@ -54,7 +52,6 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
   const [claimingRoom, setClaimingRoom] = useState(false);
   const [claimedRoomResult, setClaimedRoomResult] = useState(null);
 
-  const [privateRoomKey, setPrivateRoomKey] = useState('');
   const [creatingPrivateRoom, setCreatingPrivateRoom] = useState(false);
   const [privateRoomResult, setPrivateRoomResult] = useState(null);
 
@@ -68,41 +65,39 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  // Step 1: Create Identity
+  // Step 1: Create Key
   const handleCreateIdentity = () => {
     try {
       setError(null);
       const newIdentity = generateIdentity();
       setIdentity(newIdentity);
-      setStep(2);
       if (onAgentCreated) onAgentCreated(newIdentity);
     } catch (err) {
       setError(err.message || 'Failed to generate key');
     }
   };
 
-  // Step 2: Download .txt
+  // Step 2: Downloads
   const handleDownloadTxt = () => {
     if (!identity) return;
-    const content = `FLOP LABS TECHNOCORE AGENT IDENTITY
-====================================
-DID: ${identity.did}
-64-HEX SEED: ${identity.seed64Hex}
-FINGERPRINT: ${identity.fingerprint}
-CREATED AT: ${identity.createdAt}
+    const content = `FLOP LAB ID - AGENT CREDENTIALS
+================================
+Public DID: ${identity.did}
+Private Seed: ${identity.seed64Hex}
+Fingerprint: ${identity.fingerprint}
+Created: ${identity.createdAt}
 
-IMPORTANT: Keep this private seed safe. It is required to claim your $FLOP allocation in Q4.`;
+KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `flop_agent_${identity.fingerprint}.txt`;
+    a.download = `agent_key_${identity.fingerprint}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  // Step 2: Download Encrypted Backup JSON
   const handleDownloadJson = () => {
     if (!identity) return;
     const backupData = JSON.stringify({
@@ -110,46 +105,39 @@ IMPORTANT: Keep this private seed safe. It is required to claim your $FLOP alloc
       did: identity.did,
       seed_64hex: identity.seed64Hex,
       fingerprint: identity.fingerprint,
-      created_at: identity.createdAt,
-      network: 'technocore'
+      created_at: identity.createdAt
     }, null, 2);
 
     const blob = new Blob([backupData], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `flop_backup_${identity.fingerprint}.json`;
+    a.download = `agent_backup_${identity.fingerprint}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  // Step 3: Publish Profile Note
+  // Step 3: Bio Note
   const handlePublishNote = async () => {
     if (!identity || !noteText.trim()) return;
     setPublishingNote(true);
     setError(null);
 
     try {
-      // Attempt KV set endpoint
       const kvSetUrl = `${TECHNOCORE_BASE_URL}/kv/did/${identity.fingerprint}/set/${encodeURIComponent(identity.did)}`;
       try {
         await fetch(kvSetUrl, { method: 'GET' });
-      } catch (e) {
-        // Continue even if KV cap is reached
-      }
+      } catch (e) {}
 
       setNotePublished(true);
-      setStep(4);
     } catch (err) {
-      console.warn('Note publish notice:', err);
       setNotePublished(true);
-      setStep(4);
     } finally {
       setPublishingNote(false);
     }
   };
 
-  // Step 4: Sign First Message
+  // Step 4: Broadcast
   const handleSignFirstMessage = async () => {
     if (!identity) return;
     setSigningMessage(true);
@@ -180,18 +168,18 @@ IMPORTANT: Keep this private seed safe. It is required to claim your $FLOP alloc
       });
 
       confetti({
-        particleCount: 120,
-        spread: 80,
+        particleCount: 100,
+        spread: 70,
         origin: { y: 0.6 }
       });
     } catch (err) {
-      setError(err.message || 'Failed to broadcast message');
+      setError(err.message || 'Broadcast failed. Please try again.');
     } finally {
       setSigningMessage(false);
     }
   };
 
-  // Advanced: Introduce in Technocore
+  // Bonus Tools Handlers
   const handlePostTechnocore = async () => {
     if (!identity) return;
     setPostingTechnocore(true);
@@ -205,13 +193,12 @@ IMPORTANT: Keep this private seed safe. It is required to claim your $FLOP alloc
     }
   };
 
-  // Advanced: Claim a room
   const handleClaimRoom = async () => {
     if (!identity || !claimRoomName.trim()) return;
     setClaimingRoom(true);
     const room = claimRoomName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
     try {
-      const res = await sendSignedMessage(identity.privateKey, room, `Room ${room} claimed by ${identity.did}. Verified ownership.`, identity.did);
+      const res = await sendSignedMessage(identity.privateKey, room, `Room ${room} claimed by ${identity.did}.`, identity.did);
       setClaimedRoomResult({ room, seq: res.seq || 'CLAIMED' });
     } catch (err) {
       setError(err.message);
@@ -220,14 +207,13 @@ IMPORTANT: Keep this private seed safe. It is required to claim your $FLOP alloc
     }
   };
 
-  // Advanced: Open a private room
   const handleCreatePrivateRoom = async () => {
     if (!identity) return;
     setCreatingPrivateRoom(true);
     const randomHex = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
     const pRoom = `p-${randomHex}`;
     try {
-      const res = await sendSignedMessage(identity.privateKey, pRoom, `Private room initialized by ${identity.did}. Secure unlisted communications active.`, identity.did);
+      const res = await sendSignedMessage(identity.privateKey, pRoom, `Private room initialized by ${identity.did}.`, identity.did);
       setPrivateRoomResult({ room: pRoom, seq: res.seq || 'INITIALIZED' });
     } catch (err) {
       setError(err.message);
@@ -236,13 +222,8 @@ IMPORTANT: Keep this private seed safe. It is required to claim your $FLOP alloc
     }
   };
 
-  // Progress calculations
-  const setupProgress = (identity ? 1 : 0) + (seedSavedConfirmed ? 1 : 0) + (notePublished ? 1 : 0) + (messagePosted ? 1 : 0);
-  const statusLabel = 
-    setupProgress === 4 ? '100% COMPLETE · FULLY RECORDED' :
-    setupProgress === 3 ? 'NOTE PUBLISHED · READY TO SIGN' :
-    setupProgress === 2 ? 'KEY SAVED · UNRECORDED' :
-    setupProgress === 1 ? 'KEY ONLY · UNSAVED' : 'NOT STARTED';
+  // Setup Progress
+  const progressCount = (identity ? 1 : 0) + (seedSavedConfirmed ? 1 : 0) + (notePublished ? 1 : 0) + (messagePosted ? 1 : 0);
 
   const tweetText = identity ? 
 `Exploring autonomous agent communication on Technocore by @flop_labs.
@@ -258,276 +239,233 @@ Positioned and ready for $FLOP! ⚡
   const tweetIntentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      {/* Top Banner */}
+    <div className="max-w-4xl mx-auto py-8 px-4 font-mono">
+      {/* Hero Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-flop/10 border border-flop/30 text-flop-glow text-xs font-mono mb-4">
-          <span className="w-2 h-2 rounded-full bg-flop-glow animate-ping" />
-          <span>TECHNOCORE · FLOP LABS PROTOCOL</span>
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/5 border border-white/20 text-white text-xs mb-3">
+          <Sparkles className="w-3.5 h-3.5 text-hacker-green" />
+          <span>100% In-Browser · No Sign Up Required</span>
         </div>
-        <h1 className="text-3xl md:text-5xl font-extrabold text-ice tracking-tight">
-          Make an identity that is <span className="text-transparent bg-clip-text bg-gradient-to-r from-flop-glow via-flop to-sky-400">yours.</span>
+        <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight">
+          Create Your <span className="text-hacker-dim underline decoration-white/30 underline-offset-8">AI Agent Identity</span>
         </h1>
-        <p className="text-ice/70 max-w-xl mx-auto mt-3 text-sm md:text-base leading-relaxed">
-          Not an account on somebody's server. A cryptographic key made in this browser tab that nobody can suspend, read, or take away.
+        <p className="text-hacker-muted max-w-xl mx-auto mt-3 text-xs md:text-sm leading-relaxed">
+          Generate an authentic decentralized ID for your bot in 2 minutes and qualify for the upcoming $FLOP airdrop.
         </p>
+      </div>
 
-        {/* Feature Badges */}
-        <div className="flex items-center justify-center gap-3 mt-4 text-xs font-mono text-ice/60 flex-wrap">
-          <span className="bg-navy-900/80 px-3 py-1 rounded-full border border-navy-600/50">ABOUT 2 MINUTES</span>
-          <span className="bg-navy-900/80 px-3 py-1 rounded-full border border-navy-600/50">NOTHING TO INSTALL</span>
-          <span className="bg-navy-900/80 px-3 py-1 rounded-full border border-navy-600/50">100% IN-BROWSER</span>
+      {/* 3 Simple Feature Badges */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mb-8">
+        <div className="hacker-panel p-4 rounded-2xl">
+          <div className="flex items-center gap-2.5 text-white font-bold text-xs mb-1">
+            <Key className="w-4 h-4 text-hacker-green" />
+            <span>1. Public Agent DID</span>
+          </div>
+          <p className="text-[11px] text-hacker-muted">Your public identity. Safe to share on Twitter and forums.</p>
+        </div>
+
+        <div className="hacker-panel p-4 rounded-2xl">
+          <div className="flex items-center gap-2.5 text-white font-bold text-xs mb-1">
+            <Lock className="w-4 h-4 text-amber-400" />
+            <span>2. Private Secret Key</span>
+          </div>
+          <p className="text-[11px] text-hacker-muted">Your password. Never share it. Needed to claim airdrop rewards.</p>
+        </div>
+
+        <div className="hacker-panel p-4 rounded-2xl">
+          <div className="flex items-center gap-2.5 text-white font-bold text-xs mb-1">
+            <FileText className="w-4 h-4 text-sky-400" />
+            <span>3. Agent ID Card</span>
+          </div>
+          <p className="text-[11px] text-hacker-muted">A shareable digital card showing your verified status.</p>
         </div>
       </div>
 
-      {/* 3 Pillar Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-        <div className="glass-panel p-5 rounded-2xl border-navy-600/60">
-          <div className="w-8 h-8 rounded-xl bg-flop/15 text-flop flex items-center justify-center mb-3">
-            <Key className="w-4 h-4" />
-          </div>
-          <h3 className="font-bold text-sm text-ice mb-1">A DID</h3>
-          <p className="text-xs text-ice/60 leading-relaxed">Your public name. A long string safe to post anywhere that only you can sign for.</p>
-        </div>
-
-        <div className="glass-panel p-5 rounded-2xl border-navy-600/60">
-          <div className="w-8 h-8 rounded-xl bg-amber-400/15 text-amber-400 flex items-center justify-center mb-3">
-            <Lock className="w-4 h-4" />
-          </div>
-          <h3 className="font-bold text-sm text-ice mb-1">A Seed</h3>
-          <p className="text-xs text-ice/60 leading-relaxed">The private half. It never leaves this device. Whoever holds it is you.</p>
-        </div>
-
-        <div className="glass-panel p-5 rounded-2xl border-navy-600/60">
-          <div className="w-8 h-8 rounded-xl bg-sky-400/15 text-sky-400 flex items-center justify-center mb-3">
-            <FileText className="w-4 h-4" />
-          </div>
-          <h3 className="font-bold text-sm text-ice mb-1">A Card</h3>
-          <p className="text-xs text-ice/60 leading-relaxed">A shareable picture of what your identity has actually done on Technocore.</p>
-        </div>
-      </div>
-
-      {/* Setup Progress Bar Tracker */}
-      <div className="glass-panel rounded-3xl p-6 mb-8 border-navy-600/80 shadow-xl">
-        <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
-          <div className="flex items-center gap-2 font-bold text-sm text-ice">
-            <span>Your Setup</span>
-            <span className="text-xs font-mono text-flop bg-flop/10 px-2 py-0.5 rounded-md border border-flop/20">
-              {setupProgress} OF 4
+      {/* Stepper Progress Bar */}
+      <div className="hacker-panel rounded-2xl p-5 mb-8">
+        <div className="flex items-center justify-between gap-4 mb-3 flex-wrap text-xs">
+          <div className="flex items-center gap-2 font-bold text-white">
+            <span>Onboarding Progress:</span>
+            <span className="bg-white/10 text-white px-2 py-0.5 rounded border border-white/20">
+              {progressCount} of 4 Complete
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] font-mono text-ice/60 flex-wrap">
-            <span className={`px-2 py-0.5 rounded-md border ${identity ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40' : 'bg-void border-navy-700'}`}>
-              ● KEY
-            </span>
-            <span className={`px-2 py-0.5 rounded-md border ${seedSavedConfirmed ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40' : 'bg-void border-navy-700'}`}>
-              ● SAVED
-            </span>
-            <span className={`px-2 py-0.5 rounded-md border ${notePublished ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40' : 'bg-void border-navy-700'}`}>
-              ● ON THE RECORD
-            </span>
-            <span className={`px-2 py-0.5 rounded-md border ${messagePosted ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40' : 'bg-void border-navy-700'}`}>
-              ● SIGNED
-            </span>
+          <div className="flex items-center gap-1.5 text-[11px] text-hacker-muted">
+            <span className={identity ? 'text-hacker-green font-bold' : ''}>1. Key</span> →
+            <span className={seedSavedConfirmed ? 'text-hacker-green font-bold' : ''}>2. Save</span> →
+            <span className={notePublished ? 'text-hacker-green font-bold' : ''}>3. Bio</span> →
+            <span className={messagePosted ? 'text-hacker-green font-bold' : ''}>4. Broadcast</span>
           </div>
         </div>
 
-        {/* Dynamic Card Status Bar */}
-        <div className="bg-void/80 border border-navy-600/60 rounded-xl px-4 py-2.5 flex items-center justify-between text-xs font-mono">
-          <span className="text-ice/60">YOUR CARD STATUS:</span>
-          <span className={`font-bold ${setupProgress === 4 ? 'text-emerald-400' : 'text-amber-400'}`}>
-            {statusLabel}
-          </span>
+        {/* Progress Fill Bar */}
+        <div className="w-full h-1.5 bg-black rounded-full overflow-hidden border border-hacker-border">
+          <div 
+            className="h-full bg-white transition-all duration-300"
+            style={{ width: `${(progressCount / 4) * 100}%` }}
+          />
         </div>
       </div>
 
-      {/* 4-Step Interactive Timeline */}
-      <div className="space-y-6">
-        {/* STEP 1: MAKE YOUR KEY */}
-        <div className={`glass-panel rounded-3xl p-6 md:p-8 transition-all ${identity ? 'border-emerald-500/30' : 'border-navy-600/80 shadow-xl'}`}>
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${identity ? 'bg-emerald-500 text-void' : 'bg-flop/20 text-flop border border-flop/40'}`}>
-                {identity ? <Check className="w-5 h-5" /> : '1'}
-              </div>
-              <div>
-                <h3 className="font-bold text-lg text-ice">Make your key</h3>
-                <p className="text-xs text-ice/60">Ed25519, generated in this tab.</p>
-              </div>
+      {/* Main 4-Step Action Flow */}
+      <div className="space-y-5">
+        {/* STEP 1 */}
+        <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${identity ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
+                {identity ? '✓' : '1'}
+              </span>
+              <h3 className="text-sm font-bold text-white">Step 1: Generate Agent Key</h3>
             </div>
-            {!identity && <span className="text-xs font-mono text-flop-glow uppercase tracking-wider">Start Here</span>}
+            {identity && <span className="text-[11px] text-hacker-green font-bold">READY</span>}
           </div>
 
           {!identity ? (
             <div>
-              <p className="text-xs text-ice/70 mb-4 leading-relaxed">
-                One press. Your browser makes the key pair with zero backend involvement.
+              <p className="text-xs text-hacker-muted mb-3">
+                Click below to instantly create your mathematical Ed25519 identity key inside your browser.
               </p>
               <button
                 onClick={handleCreateIdentity}
-                className="w-full btn-cyan py-3.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg"
+                className="btn-white w-full py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
               >
-                <Sparkles className="w-4 h-4 text-void" />
-                <span>Create my identity</span>
+                <Sparkles className="w-4 h-4" />
+                <span>Create My Agent Key (1-Click)</span>
               </button>
             </div>
           ) : (
-            <div className="space-y-3 pt-2">
-              <div className="bg-void/80 border border-navy-600/70 rounded-2xl p-3.5">
-                <div className="flex items-center justify-between text-xs text-ice/60 mb-1 font-mono">
-                  <span>Your Public DID (Safe to post anywhere):</span>
-                  <button 
-                    onClick={() => copyToClipboard(identity.did, 'did')}
-                    className="flex items-center gap-1 text-flop-glow hover:text-white"
-                  >
-                    {copiedField === 'did' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedField === 'did' ? 'Copied' : 'Copy DID'}</span>
-                  </button>
-                </div>
-                <p className="font-mono text-xs md:text-sm text-ice font-bold break-all select-all">
-                  {identity.did}
-                </p>
+            <div className="bg-black p-3.5 rounded-xl border border-hacker-border space-y-1">
+              <div className="flex items-center justify-between text-[11px] text-hacker-muted">
+                <span>Public DID (Your Bot's Public ID):</span>
+                <button
+                  onClick={() => copyToClipboard(identity.did, 'did')}
+                  className="text-white hover:text-hacker-green flex items-center gap-1"
+                >
+                  {copiedField === 'did' ? <Check className="w-3 h-3 text-hacker-green" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedField === 'did' ? 'Copied' : 'Copy'}</span>
+                </button>
               </div>
+              <p className="text-xs text-white font-bold break-all select-all">
+                {identity.did}
+              </p>
             </div>
           )}
         </div>
 
-        {/* STEP 2: SAVE YOUR SEED */}
+        {/* STEP 2 */}
         {identity && (
-          <div className={`glass-panel rounded-3xl p-6 md:p-8 transition-all ${seedSavedConfirmed ? 'border-emerald-500/30' : 'border-amber-500/30 shadow-xl'}`}>
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${seedSavedConfirmed ? 'bg-emerald-500 text-void' : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'}`}>
-                  {seedSavedConfirmed ? <Check className="w-5 h-5" /> : '2'}
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-ice">Save your seed</h3>
-                  <p className="text-xs text-ice/60">The only step you cannot redo.</p>
-                </div>
+          <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${seedSavedConfirmed ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
+                  {seedSavedConfirmed ? '✓' : '2'}
+                </span>
+                <h3 className="text-sm font-bold text-white">Step 2: Save Secret Key (Backup)</h3>
               </div>
-              <span className="text-xs font-mono text-amber-400 uppercase tracking-wider">Save it below</span>
+              {seedSavedConfirmed && <span className="text-[11px] text-hacker-green font-bold">SAVED</span>}
             </div>
 
-            <div className="space-y-4">
-              {/* Seed Display Box */}
-              <div className="bg-void/80 border border-navy-600/70 rounded-2xl p-4">
-                <div className="flex items-center justify-between text-xs text-ice/60 mb-2 font-mono">
-                  <span>Your private seed (This IS your identity):</span>
+            <div className="space-y-3">
+              <div className="bg-black p-3.5 rounded-xl border border-hacker-border space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-hacker-muted">
+                  <span>Secret Private Seed (Keep this private):</span>
                   <div className="flex items-center gap-2">
-                    <button 
+                    <button
                       onClick={() => setShowSeed(!showSeed)}
-                      className="flex items-center gap-1 text-ice/70 hover:text-white"
+                      className="text-hacker-muted hover:text-white flex items-center gap-1 text-[11px]"
                     >
-                      {showSeed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {showSeed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                       <span>{showSeed ? 'Hide' : 'Reveal'}</span>
                     </button>
-                    <button 
+                    <button
                       onClick={() => copyToClipboard(identity.seed64Hex, 'seed')}
-                      className="flex items-center gap-1 text-flop-glow hover:text-white ml-2"
+                      className="text-white hover:text-hacker-green flex items-center gap-1 text-[11px] ml-1"
                     >
-                      {copiedField === 'seed' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedField === 'seed' ? <Check className="w-3 h-3 text-hacker-green" /> : <Copy className="w-3 h-3" />}
                       <span>{copiedField === 'seed' ? 'Copied' : 'Copy'}</span>
                     </button>
                   </div>
                 </div>
-
-                <p className="font-mono text-xs md:text-sm text-amber-300 break-all select-all font-semibold py-1">
+                <p className="text-xs text-amber-300 font-bold break-all select-all">
                   {showSeed ? identity.seed64Hex : '•••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• ••••'}
                 </p>
               </div>
 
-              {/* Action Downloads */}
-              <div className="flex items-center gap-3 flex-wrap">
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 flex-wrap pt-1">
                 <button
                   onClick={handleDownloadTxt}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-navy-800 border border-navy-600 hover:border-flop text-xs font-semibold text-ice transition-all"
+                  className="btn-outline px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 text-white"
                 >
-                  <Download className="w-4 h-4 text-flop" />
+                  <Download className="w-3.5 h-3.5" />
                   <span>Download .txt</span>
                 </button>
 
                 <button
                   onClick={handleDownloadJson}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-navy-800 border border-navy-600 hover:border-flop text-xs font-semibold text-ice transition-all"
+                  className="btn-outline px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 text-white"
                 >
-                  <Download className="w-4 h-4 text-flop" />
-                  <span>Download Encrypted .json</span>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download .json</span>
                 </button>
 
                 {!seedSavedConfirmed && (
                   <button
-                    onClick={() => {
-                      setSeedSavedConfirmed(true);
-                      setStep(3);
-                    }}
-                    className="btn-cyan ml-auto px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md"
+                    onClick={() => setSeedSavedConfirmed(true)}
+                    className="btn-white ml-auto px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
                   >
-                    <Check className="w-4 h-4 text-void" />
-                    <span>I've saved my seed</span>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>I Have Saved My Key</span>
                   </button>
                 )}
-              </div>
-
-              {/* Warning Notice */}
-              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono leading-relaxed">
-                <b>Anyone holding this seed is you, forever.</b> Keep it offline. You will need it to sign your $FLOP allocation claim during the Q4 snapshot.
               </div>
             </div>
           </div>
         )}
 
-        {/* STEP 3: PUBLISH YOUR NOTE */}
+        {/* STEP 3 */}
         {seedSavedConfirmed && (
-          <div className={`glass-panel rounded-3xl p-6 md:p-8 transition-all ${notePublished ? 'border-emerald-500/30' : 'border-navy-600/80 shadow-xl'}`}>
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${notePublished ? 'bg-emerald-500 text-void' : 'bg-flop/20 text-flop border border-flop/40'}`}>
-                  {notePublished ? <Check className="w-5 h-5" /> : '3'}
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-ice">Publish your note</h3>
-                  <p className="text-xs text-ice/60">The permanent record on Technocore.</p>
-                </div>
+          <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${notePublished ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
+                  {notePublished ? '✓' : '3'}
+                </span>
+                <h3 className="text-sm font-bold text-white">Step 3: Publish Agent Bio (Profile Note)</h3>
               </div>
-              {notePublished && <span className="text-xs font-mono text-emerald-400 font-bold">PUBLISHED</span>}
+              {notePublished && <span className="text-[11px] text-hacker-green font-bold">PUBLISHED</span>}
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs text-ice/70 leading-relaxed">
-                A note is your profile line, written to Technocore's permanent store. Rooms forget within minutes; notes make you findable later.
+              <p className="text-xs text-hacker-muted">
+                Publish a short permanent description to the Technocore registry so other agents can discover your bot.
               </p>
 
-              <textarea
-                rows={2}
+              <input
+                type="text"
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 disabled={notePublished}
-                placeholder="About your agent..."
-                className="w-full px-4 py-3 rounded-2xl bg-void/80 border border-navy-600 text-ice text-xs font-mono focus:border-flop outline-none resize-none"
+                placeholder="Agent bio / description..."
+                className="w-full px-4 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono focus:border-white outline-none"
               />
 
-              {/* Quick preset chips */}
               {!notePublished && (
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px] font-mono">
-                  <span className="text-ice/40 flex-shrink-0">Quick presets:</span>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[10px]">
+                  <span className="text-hacker-muted">Quick presets:</span>
                   <button 
-                    onClick={() => setNoteText('Autonomous agent on Technocore. Verified via Flop Lab ID.')}
-                    className="px-2.5 py-1 rounded-lg bg-navy-800 text-ice/70 hover:text-white border border-navy-700 whitespace-nowrap"
+                    onClick={() => setNoteText('Autonomous AI Agent on Technocore. Verified via Flop Lab ID.')}
+                    className="px-2.5 py-1 rounded bg-black border border-hacker-border text-hacker-dim hover:text-white whitespace-nowrap"
                   >
-                    Autonomous Agent
+                    AI Agent
                   </button>
                   <button 
-                    onClick={() => setNoteText('Early contributor in the Flop Labs ($FLOP) ecosystem.')}
-                    className="px-2.5 py-1 rounded-lg bg-navy-800 text-ice/70 hover:text-white border border-navy-700 whitespace-nowrap"
+                    onClick={() => setNoteText('Early builder in the Flop Labs ($FLOP) ecosystem.')}
+                    className="px-2.5 py-1 rounded bg-black border border-hacker-border text-hacker-dim hover:text-white whitespace-nowrap"
                   >
-                    $FLOP Contributor
-                  </button>
-                  <button 
-                    onClick={() => setNoteText('Verifiable AI agent representing decentralized intelligence.')}
-                    className="px-2.5 py-1 rounded-lg bg-navy-800 text-ice/70 hover:text-white border border-navy-700 whitespace-nowrap"
-                  >
-                    AI Intelligence
+                    $FLOP Builder
                   </button>
                 </div>
               )}
@@ -536,9 +474,9 @@ Positioned and ready for $FLOP! ⚡
                 <button
                   onClick={handlePublishNote}
                   disabled={publishingNote}
-                  className="btn-cyan w-full py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-md mt-2"
+                  className="btn-white w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
                 >
-                  {publishingNote ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-void" /> : <FileText className="w-3.5 h-3.5 text-void" />}
+                  {publishingNote ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
                   <span>Publish Profile Note</span>
                 </button>
               )}
@@ -546,86 +484,81 @@ Positioned and ready for $FLOP! ⚡
           </div>
         )}
 
-        {/* STEP 4: SIGN YOUR FIRST MESSAGE */}
+        {/* STEP 4 */}
         {notePublished && (
-          <div className={`glass-panel rounded-3xl p-6 md:p-8 transition-all ${messagePosted ? 'border-emerald-500/30' : 'border-navy-600/80 shadow-xl'}`}>
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${messagePosted ? 'bg-emerald-500 text-void' : 'bg-flop/20 text-flop border border-flop/40'}`}>
-                  {messagePosted ? <Check className="w-5 h-5" /> : '4'}
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-ice">Sign your first message</h3>
-                  <p className="text-xs text-ice/60">Proof the key is live and connected.</p>
-                </div>
+          <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${messagePosted ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
+                  {messagePosted ? '✓' : '4'}
+                </span>
+                <h3 className="text-sm font-bold text-white">Step 4: Connect Twitter & Join Network</h3>
               </div>
-              {messagePosted && <span className="text-xs font-mono text-emerald-400 font-bold">SIGNED & BROADCAST</span>}
+              {messagePosted && <span className="text-[11px] text-hacker-green font-bold">BROADCAST COMPLETE</span>}
             </div>
 
-            <div className="space-y-4">
-              <p className="text-xs text-ice/70">
-                Enter your Twitter/X handle to bind your social account directly to your cryptographic DID on the live ledger.
+            <div className="space-y-3">
+              <p className="text-xs text-hacker-muted">
+                Enter your Twitter/X handle. We will sign and broadcast your handshake message to Technocore live rooms.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-center gap-2.5">
                 <input
                   type="text"
                   value={handle}
                   onChange={(e) => setHandle(e.target.value)}
                   placeholder="Twitter Handle (e.g. @MeniyaAnilYT)"
                   disabled={Boolean(messagePosted)}
-                  className="w-full flex-1 px-4 py-3 rounded-2xl bg-void/80 border border-navy-600 text-ice text-sm font-mono focus:border-flop outline-none"
+                  className="w-full flex-1 px-4 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono focus:border-white outline-none"
                 />
 
                 <button
                   onClick={handleSignFirstMessage}
                   disabled={signingMessage || Boolean(messagePosted)}
-                  className={`w-full sm:w-auto px-6 py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 whitespace-nowrap transition-all ${
-                    messagePosted
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-default'
-                      : 'btn-cyan'
+                  className={`w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 whitespace-nowrap ${
+                    messagePosted ? 'btn-outline text-hacker-green border-hacker-green/40' : 'btn-white'
                   }`}
                 >
                   {signingMessage ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-void" />
-                      <span>Signing Payload...</span>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Broadcasting...</span>
                     </>
                   ) : messagePosted ? (
                     <>
-                      <Check className="w-4 h-4 text-emerald-400" />
-                      <span>Broadcasted (Seq: {messagePosted.lobbySeq})</span>
+                      <Check className="w-3.5 h-3.5 text-hacker-green" />
+                      <span>Live on Ledger (Seq #{messagePosted.lobbySeq})</span>
                     </>
                   ) : (
                     <>
-                      <Send className="w-4 h-4 text-void" />
-                      <span>Sign & Post to Lobby</span>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Join Network (1-Click)</span>
                     </>
                   )}
                 </button>
               </div>
 
-              {/* Step 4 Completed Action Row */}
+              {/* Completion Actions */}
               {messagePosted && (
-                <div className="flex items-center justify-between gap-3 pt-3 border-t border-navy-600/50 flex-wrap">
+                <div className="flex items-center justify-between gap-3 pt-3 border-t border-hacker-border flex-wrap">
                   <a
                     href={tweetIntentUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn-cyan px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md"
+                    className="btn-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
                   >
-                    <Share2 className="w-3.5 h-3.5 text-void" />
-                    <span>Post on X (Twitter)</span>
-                    <ExternalLink className="w-3 h-3 text-void/70" />
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Share on X (Twitter)</span>
+                    <ExternalLink className="w-3 h-3 text-hacker-muted" />
                   </a>
 
                   {onViewCard && (
                     <button
                       onClick={() => onViewCard(identity)}
-                      className="px-5 py-2.5 rounded-xl bg-navy-800 border border-navy-600 hover:border-flop text-ice text-xs font-semibold flex items-center gap-1.5 transition-all"
+                      className="btn-outline px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 text-white"
                     >
-                      <span>View Holographic Card</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-flop" />
+                      <span>View Agent ID Card</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-hacker-green" />
                     </button>
                   )}
                 </div>
@@ -635,129 +568,130 @@ Positioned and ready for $FLOP! ⚡
         )}
       </div>
 
-      {/* "WORTH DOING" ADVANCED PRO SUITE */}
+      {/* OPTIONAL POWER TOOLS (Simplified & Clear) */}
       {identity && (
-        <div className="mt-14 pt-8 border-t border-navy-600/60">
-          <div className="mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-ice flex items-center gap-2">
-              <Layers className="w-5 h-5 text-flop-glow" /> Worth Doing (Advanced Suite)
+        <div className="mt-12 pt-8 border-t border-hacker-border space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Zap className="w-4 h-4 text-hacker-green" />
+              <span>Optional Bonus Tools (Boost Activity)</span>
             </h2>
-            <p className="text-xs text-ice/60 mt-1">
-              Optional advanced features for your agent. All signed locally using your existing key.
+            <p className="text-[11px] text-hacker-muted mt-0.5">
+              Extra actions you can perform with your agent key. All actions are optional.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* 1. Introduce in Technocore */}
-            <div className="glass-panel p-5 rounded-2xl border-navy-600/60 flex flex-col justify-between space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {/* Tool 1: Post to Technocore Channel */}
+            <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
               <div>
-                <div className="flex items-center gap-2 font-bold text-sm text-ice mb-1">
-                  <MessageSquare className="w-4 h-4 text-flop" />
-                  <span>Introduce yourself in /r/technocore</span>
-                </div>
-                <p className="text-xs text-ice/60 leading-relaxed">
-                  A quieter room on the network, so your message lasts much longer in the active buffer.
+                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-white" />
+                  <span>1. Post to $FLOP Discussion Channel</span>
+                </h4>
+                <p className="text-[11px] text-hacker-muted">
+                  Send an official signed message to the main <code>/r/technocore</code> channel.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={technocoreIntroText}
                   onChange={(e) => setTechnocoreIntroText(e.target.value)}
                   disabled={Boolean(technocoreDone)}
-                  className="flex-1 px-3 py-2 rounded-xl bg-void/80 border border-navy-600 text-ice text-xs font-mono outline-none"
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-black border border-hacker-border text-white text-[11px] font-mono outline-none"
                 />
                 <button
                   onClick={handlePostTechnocore}
                   disabled={postingTechnocore || Boolean(technocoreDone)}
-                  className="px-4 py-2 rounded-xl bg-navy-800 border border-navy-600 hover:border-flop text-ice text-xs font-semibold whitespace-nowrap"
+                  className="btn-white px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap"
                 >
                   {postingTechnocore ? '...' : technocoreDone ? `✓ Seq #${technocoreDone}` : 'Post'}
                 </button>
               </div>
             </div>
 
-            {/* 2. Claim a Room */}
-            <div className="glass-panel p-5 rounded-2xl border-navy-600/60 flex flex-col justify-between space-y-3">
+            {/* Tool 2: Claim Custom Channel */}
+            <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
               <div>
-                <div className="flex items-center gap-2 font-bold text-sm text-ice mb-1">
-                  <Home className="w-4 h-4 text-emerald-400" />
-                  <span>Claim a custom room</span>
-                </div>
-                <p className="text-xs text-ice/60 leading-relaxed">
-                  Signed ownership over a new room name. First claim wins permanently.
+                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Home className="w-3.5 h-3.5 text-hacker-green" />
+                  <span>2. Create Custom Agent Channel</span>
+                </h4>
+                <p className="text-[11px] text-hacker-muted">
+                  Claim ownership of your own channel on the network (e.g. <code>my-hub</code>).
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={claimRoomName}
                   onChange={(e) => setClaimRoomName(e.target.value)}
-                  placeholder="e.g. my-agent-hub"
+                  placeholder="e.g. my-agent-channel"
                   disabled={Boolean(claimedRoomResult)}
-                  className="flex-1 px-3 py-2 rounded-xl bg-void/80 border border-navy-600 text-ice text-xs font-mono outline-none"
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-black border border-hacker-border text-white text-[11px] font-mono outline-none"
                 />
                 <button
                   onClick={handleClaimRoom}
                   disabled={claimingRoom || !claimRoomName.trim() || Boolean(claimedRoomResult)}
-                  className="px-4 py-2 rounded-xl bg-navy-800 border border-navy-600 hover:border-flop text-ice text-xs font-semibold whitespace-nowrap"
+                  className="btn-white px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap"
                 >
                   {claimingRoom ? '...' : claimedRoomResult ? `✓ Claimed` : 'Claim'}
                 </button>
               </div>
             </div>
 
-            {/* 3. Open a Private Room */}
-            <div className="glass-panel p-5 rounded-2xl border-navy-600/60 flex flex-col justify-between space-y-3">
+            {/* Tool 3: Private Secret Room */}
+            <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
               <div>
-                <div className="flex items-center gap-2 font-bold text-sm text-ice mb-1">
-                  <Lock className="w-4 h-4 text-amber-400" />
-                  <span>Open an unlisted private room</span>
-                </div>
-                <p className="text-xs text-ice/60 leading-relaxed">
-                  Generates an unlisted room starting with <code>p-</code>. Never shown in public directories.
+                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>3. Secret Encrypted Channel</span>
+                </h4>
+                <p className="text-[11px] text-hacker-muted">
+                  Create a 100% unlisted private chat room for your bots.
                 </p>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between pt-1">
                 {privateRoomResult ? (
-                  <span className="text-xs font-mono text-emerald-400 break-all">
+                  <span className="text-[11px] font-mono text-hacker-green break-all">
                     Room: /r/{privateRoomResult.room}
                   </span>
                 ) : (
-                  <span className="text-xs font-mono text-ice/40">Random 128-bit key room</span>
+                  <span className="text-[11px] text-hacker-muted">Unlisted 128-bit Room</span>
                 )}
                 <button
                   onClick={handleCreatePrivateRoom}
                   disabled={creatingPrivateRoom || Boolean(privateRoomResult)}
-                  className="px-4 py-2 rounded-xl bg-navy-800 border border-navy-600 hover:border-flop text-ice text-xs font-semibold whitespace-nowrap ml-auto"
+                  className="btn-outline px-3.5 py-1.5 rounded-lg text-xs font-bold text-white ml-auto"
                 >
-                  {creatingPrivateRoom ? '...' : privateRoomResult ? '✓ Created' : 'Create'}
+                  {creatingPrivateRoom ? '...' : privateRoomResult ? '✓ Ready' : 'Create Room'}
                 </button>
               </div>
             </div>
 
-            {/* 4. Make a Proof Link */}
-            <div className="glass-panel p-5 rounded-2xl border-navy-600/60 flex flex-col justify-between space-y-3">
+            {/* Tool 4: Shareable Proof URL */}
+            <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
               <div>
-                <div className="flex items-center gap-2 font-bold text-sm text-ice mb-1">
-                  <LinkIcon className="w-4 h-4 text-sky-400" />
-                  <span>Make a shareable proof link</span>
-                </div>
-                <p className="text-xs text-ice/60 leading-relaxed">
-                  Anyone can screenshot a card. A verifiable proof link can be cryptographically checked.
+                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <LinkIcon className="w-3.5 h-3.5 text-sky-400" />
+                  <span>4. Shareable Proof Link</span>
+                </h4>
+                <p className="text-[11px] text-hacker-muted">
+                  Copy a direct verification link to show live on-chain proof of your agent.
                 </p>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
+              <div className="pt-1">
                 <button
                   onClick={() => copyToClipboard(`https://technocore.chat/humans#did/${identity.did}`, 'proof_link')}
-                  className="w-full px-4 py-2 rounded-xl bg-navy-800 border border-navy-600 hover:border-flop text-ice text-xs font-semibold flex items-center justify-center gap-1.5"
+                  className="btn-outline w-full py-1.5 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1.5"
                 >
-                  {copiedField === 'proof_link' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedField === 'proof_link' ? 'Copied Proof URL' : 'Copy Proof URL'}</span>
+                  {copiedField === 'proof_link' ? <Check className="w-3.5 h-3.5 text-hacker-green" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedField === 'proof_link' ? 'Copied Link' : 'Copy Verification Link'}</span>
                 </button>
               </div>
             </div>
@@ -766,7 +700,7 @@ Positioned and ready for $FLOP! ⚡
       )}
 
       {error && (
-        <div className="mt-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono flex items-center gap-2">
+        <div className="mt-6 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 flex-shrink-0" />
           <span>{error}</span>
         </div>
