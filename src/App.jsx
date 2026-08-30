@@ -1,11 +1,55 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import Navbar from './components/Navbar';
 import CreateAgent from './components/CreateAgent';
 import AgentCard from './components/AgentCard';
 import ChatRooms from './components/ChatRooms';
-import { Terminal, ExternalLink } from 'lucide-react';
+import { Terminal, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 
 const STORAGE_KEY = 'flop_agent_state_v6';
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('FlopLab Runtime Error caught by Boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-black text-white p-6 font-mono">
+          <div className="max-w-md w-full p-6 rounded-2xl bg-hacker-card border border-red-500/40 space-y-4 text-center">
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 mx-auto flex items-center justify-center">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <h2 className="text-base font-bold text-white">Temporary Session Glitch Recovered</h2>
+            <p className="text-xs text-hacker-muted leading-relaxed">
+              {this.state.error?.message || 'An unexpected state error occurred. Click below to safely reset and continue.'}
+            </p>
+            <button
+              onClick={() => {
+                localStorage.removeItem(STORAGE_KEY);
+                window.location.reload();
+              }}
+              className="btn-white w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Reset Session & Reload</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('create');
@@ -28,7 +72,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-black text-white selection:bg-white selection:text-black font-mono">
+    <ErrorBoundary>
+      <div className="min-h-screen flex flex-col justify-between bg-black text-white selection:bg-white selection:text-black font-mono">
       {/* Hacker Matrix Ambient Gradient */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-0 left-1/3 w-[600px] h-[400px] bg-white/[0.03] rounded-full blur-[160px]" />
@@ -119,5 +164,6 @@ export default function App() {
         </footer>
       </div>
     </div>
+    </ErrorBoundary>
   );
 }
