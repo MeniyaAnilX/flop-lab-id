@@ -21,7 +21,6 @@ import { verifyDidStatus, readKvNote, TECHNOCORE_BASE_URL } from '../lib/technoc
 const STORAGE_KEY = 'flop_agent_state_v6';
 
 export default function AgentCard({ initialIdentity }) {
-  // Empty by default (no prefill)
   const [didInput, setDidInput] = useState('');
   const [currentDid, setCurrentDid] = useState('');
   const [noteContent, setNoteContent] = useState('');
@@ -33,15 +32,14 @@ export default function AgentCard({ initialIdentity }) {
 
   const cardRef = useRef(null);
 
-  // If navigated from "View Card" button in CreateAgent, prefill that specific instance
+  // If navigated from "View Card" button in CreateAgent
   useEffect(() => {
     if (initialIdentity?.did) {
       try {
         parseDid(initialIdentity.did);
-        setCurrentDid(initialIdentity.did);
         setDidInput(initialIdentity.did);
         setError(null);
-        loadAgentData(initialIdentity.did);
+        performSearch(initialIdentity.did);
       } catch {
         setError('Invalid initial DID format');
         setCurrentDid('');
@@ -49,11 +47,12 @@ export default function AgentCard({ initialIdentity }) {
     }
   }, [initialIdentity]);
 
-  // Real-Time Agent Data Fetch & Verification
-  const loadAgentData = async (didToQuery) => {
+  // Core Search & Verification Execution
+  const performSearch = async (didToQuery) => {
     if (!didToQuery) return;
     setLoading(true);
     setError(null);
+    setCurrentDid(''); // KEEP CARD HIDDEN UNTIL SEARCH FULLY COMPLETES
     setNoteContent('');
     setStatusData(null);
 
@@ -70,15 +69,20 @@ export default function AgentCard({ initialIdentity }) {
       // 3. Query Technocore room verification
       const res = await verifyDidStatus(didToQuery);
       setStatusData(res);
+
+      // 4. Set currentDid ONLY after search & verification is 100% finished!
+      setCurrentDid(didToQuery);
     } catch (err) {
-      setError(err.message || 'Invalid DID string. Must start with did:key:z6Mk...');
-      setCurrentDid(''); // DO NOT RENDER CARD FOR INVALID DID!
+      setError(err.message || 'Invalid DID format! A valid agent DID must start with "did:key:z6Mk" and be 48 characters.');
+      setCurrentDid('');
+      setStatusData(null);
+      setNoteContent('');
     } finally {
       setLoading(false);
     }
   };
 
-  // Submit DID Search Query with Strict Validation
+  // Submit DID Search Query
   const handleSearch = (e) => {
     e.preventDefault();
     const clean = didInput.trim();
@@ -87,18 +91,7 @@ export default function AgentCard({ initialIdentity }) {
       setCurrentDid('');
       return;
     }
-
-    try {
-      parseDid(clean); // Throws if invalid prefix, length, or Base58 encoding
-      setError(null);
-      setCurrentDid(clean);
-      loadAgentData(clean);
-    } catch (err) {
-      setError('Invalid DID format! A valid agent DID must start with "did:key:z6Mk" and be 48 characters.');
-      setCurrentDid('');
-      setStatusData(null);
-      setNoteContent('');
-    }
+    performSearch(clean);
   };
 
   // Download Card as PNG Image
@@ -178,7 +171,7 @@ export default function AgentCard({ initialIdentity }) {
             className="w-full sm:w-auto btn-white px-6 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 whitespace-nowrap shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-            <span>Search</span>
+            <span>{loading ? 'Searching...' : 'Search'}</span>
           </button>
         </form>
 
@@ -190,8 +183,19 @@ export default function AgentCard({ initialIdentity }) {
         )}
       </div>
 
-      {/* RENDER CARD ONLY AFTER SEARCH */}
-      {currentDid && !error ? (
+      {/* 1. LOADING STATE (WHILE SEARCHING) */}
+      {loading && (
+        <div className="hacker-panel rounded-2xl p-12 text-center border-dashed border-white/20 space-y-3 animate-fadeIn">
+          <RefreshCw className="w-6 h-6 animate-spin text-white mx-auto" />
+          <h4 className="text-sm font-bold text-white">Verifying Cryptographic Ledger Records...</h4>
+          <p className="text-xs text-hacker-muted max-w-sm mx-auto">
+            Querying Technocore decentralized KV storage and signature verification...
+          </p>
+        </div>
+      )}
+
+      {/* 2. RENDER CARD ONLY AFTER SEARCH FULLY COMPLETES */}
+      {!loading && currentDid && !error && (
         <div className="space-y-6 animate-fadeIn">
           <div className="flex justify-center p-2">
             <div
@@ -222,11 +226,6 @@ export default function AgentCard({ initialIdentity }) {
                   <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-hacker-green/10 border border-hacker-green/40 text-hacker-green text-[11px] font-bold">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>VERIFIED AGENT</span>
-                  </div>
-                ) : loading ? (
-                  <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/10 border border-white/20 text-white text-[11px] font-bold">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
-                    <span>VERIFYING ON-CHAIN...</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-400/10 border border-amber-400/40 text-amber-300 text-[11px] font-bold">
@@ -323,8 +322,10 @@ export default function AgentCard({ initialIdentity }) {
             </button>
           </div>
         </div>
-      ) : (
-        /* Empty State before search */
+      )}
+
+      {/* 3. EMPTY PROMPT STATE (BEFORE USER HAS SEARCHED) */}
+      {!loading && !currentDid && !error && (
         <div className="hacker-panel rounded-2xl p-10 md:p-14 text-center border-dashed border-hacker-border space-y-3">
           <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-hacker-muted">
             <Search className="w-6 h-6" />
