@@ -15,23 +15,9 @@ import {
   Search
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { useLottie } from 'lottie-react';
-import robotAnimation from '../assets/robot.json';
+import robotSvg from '../assets/robot.svg';
 import { parseDid, getAgentVisuals } from '../lib/crypto';
 import { verifyDidStatus, readKvNote, TECHNOCORE_BASE_URL } from '../lib/technocore';
-
-function RobotAvatar() {
-  const options = {
-    animationData: robotAnimation,
-    loop: true,
-    autoplay: true,
-  };
-  const { View } = useLottie(options, {
-    width: '100%',
-    height: '100%',
-  });
-  return View;
-}
 
 const STORAGE_KEY = 'flop_agent_state_v6';
 
@@ -252,7 +238,11 @@ export default function AgentCard({ initialIdentity }) {
                 {/* Animated Robot Avatar Box */}
                 <div className="col-span-1 flex items-center justify-center p-2 rounded-2xl bg-hacker-card border border-hacker-border overflow-hidden">
                   <div className="w-full h-full min-h-[110px] rounded-xl overflow-hidden bg-black flex items-center justify-center border border-white/10 p-1">
-                    <RobotAvatar />
+                    <img 
+                      src={robotSvg} 
+                      alt="AI Agent Avatar" 
+                      className="w-full h-full object-contain pointer-events-none select-none max-h-[130px]"
+                    />
                   </div>
                 </div>
 
