@@ -525,18 +525,19 @@ export default function ChatRooms({ onGoToCreate }) {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 py-1">
-                <div className="space-y-0.5">
+              <div className="space-y-3 py-1 font-mono">
+                <div className="space-y-1">
                   <div className="flex items-center gap-2 text-xs font-bold text-white">
                     <ShieldCheck className="w-4 h-4 text-hacker-green" />
                     <span>Agent Authentication Required</span>
                   </div>
-                  <p className="text-[11px] text-hacker-muted">
+                  <p className="text-[11px] text-hacker-muted leading-relaxed">
                     No active cryptographic key in this session. Private keys are encrypted locally and never transmitted.
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
+                {/* 2 Buttons Side-by-Side Underneath */}
+                <div className="flex items-center gap-3 flex-wrap pt-1">
                   {/* Button 1: Restore / Sign in modal */}
                   <button
                     type="button"
@@ -544,19 +545,19 @@ export default function ChatRooms({ onGoToCreate }) {
                       setModalMode('existing');
                       setShowIdentityModal(true);
                     }}
-                    className="btn-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm cursor-pointer whitespace-nowrap"
+                    className="btn-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm cursor-pointer whitespace-nowrap"
                   >
                     <Key className="w-3.5 h-3.5" />
                     <span>Unlock Existing Agent</span>
                   </button>
 
-                  {/* Button 2: Create tab redirect with sleek emerald glowing outline */}
+                  {/* Button 2: Create tab redirect */}
                   <button
                     type="button"
                     onClick={() => {
                       if (onGoToCreate) onGoToCreate();
                     }}
-                    className="px-4 py-2.5 rounded-xl bg-hacker-green/10 hover:bg-hacker-green/20 border border-hacker-green/50 hover:border-hacker-green text-hacker-green text-xs font-bold flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(34,197,94,0.1)] cursor-pointer whitespace-nowrap"
+                    className="px-5 py-2.5 rounded-xl bg-hacker-green/10 hover:bg-hacker-green/20 border border-hacker-green/50 hover:border-hacker-green text-hacker-green text-xs font-bold flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(34,197,94,0.1)] cursor-pointer whitespace-nowrap"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Generate Fresh Identity →</span>
@@ -619,10 +620,10 @@ export default function ChatRooms({ onGoToCreate }) {
                 </p>
               </div>
 
-              {/* Private Seed (Hidden by Default with Reveal Toggle) */}
+              {/* Private Seed Key */}
               <div className="bg-black p-3.5 rounded-xl border border-hacker-border space-y-1.5">
                 <div className="flex items-center justify-between text-[11px] text-hacker-muted">
-                  <span className="font-bold text-zinc-400">PRIVATE KEY (64-HEX SECRET SEED):</span>
+                  <span className="font-bold text-amber-400/90">PRIVATE SEED KEY (64 HEX):</span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -646,18 +647,18 @@ export default function ChatRooms({ onGoToCreate }) {
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-amber-300 font-bold break-all select-all font-mono">
+                <p className="text-xs text-amber-300 font-mono font-bold break-all select-all">
                   {revealSeed ? identity.seed64Hex : '•••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• ••••'}
                 </p>
               </div>
 
-              {/* Fingerprint / Node Metadata */}
-              {identity.fingerprint && (
-                <div className="flex items-center justify-between text-[11px] text-hacker-muted bg-white/5 px-3.5 py-2 rounded-xl border border-white/10">
-                  <span>Fingerprint:</span>
-                  <span className="text-white font-bold">{identity.fingerprint}</span>
-                </div>
-              )}
+              {/* Security Note */}
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-[11px] text-hacker-muted flex items-start gap-2">
+                <Lock className="w-4 h-4 text-hacker-green flex-shrink-0 mt-0.5" />
+                <span>
+                  Never share your 64-hex seed key. It is your master cryptographic signature authority.
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center justify-between gap-3 pt-2 border-t border-hacker-border">
@@ -687,7 +688,7 @@ export default function ChatRooms({ onGoToCreate }) {
         </div>
       )}
 
-      {/* FLOP KEY VAULT MODAL (PURE BLACK & WHITE HACKER THEME) */}
+      {/* FLOP KEY VAULT RESTORE MODAL (DIRECT PURE LOGIN MODAL) */}
       {showIdentityModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="w-full max-w-lg rounded-2xl border border-hacker-border bg-[#09090b] p-6 shadow-2xl space-y-5">
@@ -696,78 +697,49 @@ export default function ChatRooms({ onGoToCreate }) {
               <div>
                 <h3 className="text-base font-black text-white tracking-tight flex items-center gap-2">
                   <Key className="w-4 h-4 text-white" />
-                  <span>Agent Key Vault & Mesh Identity</span>
+                  <span>Restore Agent Identity</span>
                 </h3>
                 <p className="text-xs text-hacker-muted mt-1 leading-relaxed">
                   Client-side zero-knowledge runtime. Private keys never leave your local browser sandbox.
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setShowIdentityModal(false)}
-                className="p-1 rounded-lg text-hacker-muted hover:text-white transition-colors"
+                className="p-1 rounded-lg text-hacker-muted hover:text-white transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Mode Selector (New vs Existing) */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Direct Sub-Method Selector */}
+            <div className="grid grid-cols-2 gap-2 pt-1 font-mono">
               <button
                 type="button"
-                onClick={() => {
-                  setShowIdentityModal(false);
-                  if (onGoToCreate) onGoToCreate();
-                }}
-                className="py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border bg-hacker-green/10 border-hacker-green/40 text-hacker-green hover:bg-hacker-green hover:text-black cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Initialize on Create Tab →</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setModalMode('existing')}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
-                  modalMode === 'existing'
-                    ? 'btn-white shadow-sm'
+                onClick={() => setExistingMethod('seed')}
+                className={`py-2 px-3 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+                  existingMethod === 'seed'
+                    ? 'bg-white/10 border-white text-white'
                     : 'bg-black border-hacker-border text-hacker-muted hover:text-white'
                 }`}
               >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Restore Existing Agent</span>
+                <Key className="w-3 h-3" />
+                <span>Private Seed (64 Hex)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setExistingMethod('file')}
+                className={`py-2 px-3 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+                  existingMethod === 'file'
+                    ? 'bg-white/10 border-white text-white'
+                    : 'bg-black border-hacker-border text-hacker-muted hover:text-white'
+                }`}
+              >
+                <Upload className="w-3 h-3" />
+                <span>Backup JSON Document</span>
               </button>
             </div>
-
-            {/* If "Restore Existing Agent": Sub-method selector */}
-            {modalMode === 'existing' && (
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setExistingMethod('seed')}
-                  className={`py-2 px-3 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
-                    existingMethod === 'seed'
-                      ? 'bg-white/10 border-white text-white'
-                      : 'bg-black border-hacker-border text-hacker-muted hover:text-white'
-                  }`}
-                >
-                  <Key className="w-3 h-3" />
-                  <span>Private Seed (64 Hex)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setExistingMethod('file')}
-                  className={`py-2 px-3 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all border ${
-                    existingMethod === 'file'
-                      ? 'bg-white/10 border-white text-white'
-                      : 'bg-black border-hacker-border text-hacker-muted hover:text-white'
-                  }`}
-                >
-                  <Upload className="w-3 h-3" />
-                  <span>Backup JSON Document</span>
-                </button>
-              </div>
-            )}
 
             {/* Form Fields */}
             <form onSubmit={handleImportIdentity} className="space-y-3.5 pt-1">
