@@ -11,7 +11,8 @@ import {
   ExternalLink,
   RefreshCw,
   AlertCircle,
-  Clock
+  Clock,
+  Search
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { parseDid, getAgentVisuals } from '../lib/crypto';
@@ -20,39 +21,10 @@ import { verifyDidStatus, readKvNote, TECHNOCORE_BASE_URL } from '../lib/technoc
 const STORAGE_KEY = 'flop_agent_state_v6';
 
 export default function AgentCard({ initialIdentity }) {
-  const [didInput, setDidInput] = useState(() => {
-    if (initialIdentity?.did) return initialIdentity.did;
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).identity?.did || '' : '';
-    } catch { return ''; }
-  });
-
-  const [currentDid, setCurrentDid] = useState(() => {
-    if (initialIdentity?.did) return initialIdentity.did;
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      const id = saved ? JSON.parse(saved).identity?.did : '';
-      if (id) {
-        try {
-          parseDid(id);
-          return id;
-        } catch { return ''; }
-      }
-      return '';
-    } catch { return ''; }
-  });
-
-  const [noteContent, setNoteContent] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.notePublishedData?.text || parsed.noteText || '';
-      }
-      return '';
-    } catch { return ''; }
-  });
+  // Empty by default (no prefill)
+  const [didInput, setDidInput] = useState('');
+  const [currentDid, setCurrentDid] = useState('');
+  const [noteContent, setNoteContent] = useState('');
   const [statusData, setStatusData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -61,6 +33,7 @@ export default function AgentCard({ initialIdentity }) {
 
   const cardRef = useRef(null);
 
+  // If navigated from "View Card" button in CreateAgent, prefill that specific instance
   useEffect(() => {
     if (initialIdentity?.did) {
       try {
@@ -73,8 +46,6 @@ export default function AgentCard({ initialIdentity }) {
         setError('Invalid initial DID format');
         setCurrentDid('');
       }
-    } else if (currentDid) {
-      loadAgentData(currentDid);
     }
   }, [initialIdentity]);
 
@@ -107,12 +78,12 @@ export default function AgentCard({ initialIdentity }) {
     }
   };
 
-  // Submit DID Query with Strict Validation
-  const handleQuery = (e) => {
+  // Submit DID Search Query with Strict Validation
+  const handleSearch = (e) => {
     e.preventDefault();
     const clean = didInput.trim();
     if (!clean) {
-      setError('Please enter a public DID (e.g. did:key:z6Mk...)');
+      setError('Please paste an Agent DID (e.g. did:key:z6Mk...)');
       setCurrentDid('');
       return;
     }
@@ -124,7 +95,7 @@ export default function AgentCard({ initialIdentity }) {
       loadAgentData(clean);
     } catch (err) {
       setError('Invalid DID format! A valid agent DID must start with "did:key:z6Mk" and be 48 characters.');
-      setCurrentDid(''); // CLEAR CARD ON INVALID INPUT
+      setCurrentDid('');
       setStatusData(null);
       setNoteContent('');
     }
@@ -163,7 +134,7 @@ export default function AgentCard({ initialIdentity }) {
   // Actual Network Recording Status
   const isRecordedOnLedger = Boolean(noteContent || statusData?.lobbyVerified || statusData?.technocoreVerified);
   const qrUrl = currentDid 
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(currentDid)}&color=FFFFFF&bgcolor=000000`
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`https://technocore.chat/humans#did/${currentDid}`)}&color=FFFFFF&bgcolor=000000`
     : '';
 
   return (
@@ -184,7 +155,7 @@ export default function AgentCard({ initialIdentity }) {
 
       {/* Query Bar */}
       <div className="hacker-panel rounded-2xl p-4 mb-8">
-        <form onSubmit={handleQuery} className="flex flex-col sm:flex-row items-center gap-3">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
             <input
               type="text"
@@ -193,7 +164,7 @@ export default function AgentCard({ initialIdentity }) {
                 setDidInput(e.target.value);
                 if (error) setError(null);
               }}
-              placeholder="Paste public DID (did:key:z6Mk...)"
+              placeholder="Paste public DID (e.g. did:key:z6Mk...)"
               className={`w-full pl-10 pr-4 py-3 rounded-xl bg-black border text-white text-xs font-mono outline-none transition-all ${
                 error ? 'border-red-500/70 focus:border-red-500' : 'border-hacker-border focus:border-white'
               }`}
@@ -204,10 +175,10 @@ export default function AgentCard({ initialIdentity }) {
           <button
             type="submit"
             disabled={loading || !didInput.trim()}
-            className="w-full sm:w-auto btn-white px-6 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 whitespace-nowrap shadow-md"
+            className="w-full sm:w-auto btn-white px-6 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 whitespace-nowrap shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
-            <span>Render Card</span>
+            {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+            <span>Search</span>
           </button>
         </form>
 
@@ -219,7 +190,7 @@ export default function AgentCard({ initialIdentity }) {
         )}
       </div>
 
-      {/* Holographic Hacker Credential Card - ONLY RENDER IF DID IS VALID */}
+      {/* RENDER CARD ONLY AFTER SEARCH */}
       {currentDid && !error ? (
         <div className="space-y-6 animate-fadeIn">
           <div className="flex justify-center p-2">
@@ -324,35 +295,46 @@ export default function AgentCard({ initialIdentity }) {
             <button
               onClick={handleDownloadImage}
               disabled={downloading}
-              className="btn-white px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg"
+              className="btn-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg"
             >
-              {downloading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              {downloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               <span>Download Agent Card (PNG)</span>
             </button>
 
             <a
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                `My autonomous AI agent is verified on Technocore by @flop_labs.\n\nAgent DID:\n${currentDid}\n\nPositioned and ready for $FLOP.`
+                `Verifying my autonomous AI Agent ID on @flop_labs & @technocore_chat.\n\nDID: ${currentDid}\n\n$FLOP Airdrop Ready. Check my on-chain record: https://technocore.chat/humans#did/${currentDid}`
               )}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-outline px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 text-white"
+              className="btn-outline px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"
             >
-              <Share2 className="w-3.5 h-3.5" />
+              <Share2 className="w-4 h-4" />
               <span>Share on X</span>
               <ExternalLink className="w-3 h-3 text-hacker-muted" />
             </a>
 
             <button
               onClick={() => copyToClipboard(`https://technocore.chat/humans#did/${currentDid}`)}
-              className="btn-outline px-5 py-3 rounded-xl text-xs font-bold flex items-center gap-1.5 text-white"
+              className="btn-outline px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-hacker-green" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied Proof URL' : 'Copy Proof Link'}</span>
+              {copied ? <Check className="w-4 h-4 text-hacker-green" /> : <Copy className="w-4 h-4" />}
+              <span>{copied ? 'Proof Link Copied!' : 'Copy Proof Link'}</span>
             </button>
           </div>
         </div>
-      ) : null}
+      ) : (
+        /* Empty State before search */
+        <div className="hacker-panel rounded-2xl p-10 md:p-14 text-center border-dashed border-hacker-border space-y-3">
+          <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-hacker-muted">
+            <Search className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-white">No Agent Card Loaded</h3>
+          <p className="text-xs text-hacker-muted max-w-md mx-auto leading-relaxed">
+            Paste any public Ed25519 DID (<code className="text-white bg-white/10 px-1.5 py-0.5 rounded">did:key:z6Mk...</code>) in the search field above and click <b>Search</b> to verify on-chain ledger records and render the official passport.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
