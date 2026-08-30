@@ -25,7 +25,13 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { fetchRoomMessages, sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
+import { 
+  fetchRoomMessages, 
+  getCachedRoomMessages, 
+  saveCachedRoomMessages, 
+  sendSignedMessage, 
+  TECHNOCORE_BASE_URL 
+} from '../lib/technocore';
 import { 
   getAgentVisuals, 
   generateIdentity, 
@@ -47,8 +53,9 @@ export default function ChatRooms({ onGoToCreate }) {
   // Current Active Channel
   const [currentRoom, setCurrentRoom] = useState('lobby');
   const [roomQuery, setRoomQuery] = useState('');
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => getCachedRoomMessages('lobby'));
   const [loading, setLoading] = useState(false);
+  const [isMeshLive, setIsMeshLive] = useState(true);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -83,30 +90,34 @@ export default function ChatRooms({ onGoToCreate }) {
 
   // Fetch Channel Messages (Merge smoothly)
   const loadRoomMessages = async (showSpinner = false) => {
-    if (showSpinner) setLoading(true);
+    if (showSpinner && messages.length === 0) setLoading(true);
     try {
       const data = await fetchRoomMessages(currentRoom, 200);
-      setMessages((prev) => {
-        const map = new Map();
-        (data.messages || []).forEach((m) => map.set(m.seq, m));
-        prev.forEach((m) => {
-          if (!map.has(m.seq)) map.set(m.seq, m);
+      setIsMeshLive(data.isLive !== false);
+      if (data.messages && data.messages.length > 0) {
+        setMessages((prev) => {
+          const map = new Map();
+          data.messages.forEach((m) => map.set(m.seq || `${m.nonce}-${m.from}`, m));
+          prev.forEach((m) => {
+            const id = m.seq || `${m.nonce}-${m.from}`;
+            if (!map.has(id)) map.set(id, m);
+          });
+          const sorted = Array.from(map.values()).sort((a, b) => (a.seq || 0) - (b.seq || 0));
+          return sorted.slice(-300);
         });
-        const sorted = Array.from(map.values()).sort((a, b) => (a.seq || 0) - (b.seq || 0));
-        return sorted.slice(-300);
-      });
+      }
       if (data.lastSeq) setLastSeq(data.lastSeq);
     } catch (err) {
       console.warn('Failed to load room messages:', err);
     } finally {
-      if (showSpinner) setLoading(false);
+      setLoading(false);
     }
   };
 
   // Change channel
   useEffect(() => {
-    setMessages([]);
-    loadRoomMessages(true);
+    setMessages(getCachedRoomMessages(currentRoom));
+    loadRoomMessages(false);
   }, [currentRoom]);
 
   // Auto-refresh interval (every 3 seconds)
@@ -342,9 +353,13 @@ export default function ChatRooms({ onGoToCreate }) {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-hacker-green/10 border border-hacker-green/40 text-hacker-green text-[11px] font-bold">
-                <span className="w-2 h-2 rounded-full bg-hacker-green animate-pulse"></span>
-                <span>MESH LIVE</span>
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                isMeshLive 
+                  ? 'bg-hacker-green/10 border-hacker-green/40 text-hacker-green' 
+                  : 'bg-amber-400/10 border-amber-400/40 text-amber-400'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${isMeshLive ? 'bg-hacker-green animate-pulse' : 'bg-amber-400'}`}></span>
+                <span>{isMeshLive ? 'MESH LIVE' : 'MESH SYNCING'}</span>
               </div>
 
               <button
@@ -363,9 +378,18 @@ export default function ChatRooms({ onGoToCreate }) {
             className="flex-1 p-4 md:p-5 overflow-y-auto space-y-4 bg-black/30 custom-scrollbar"
           >
             {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-hacker-muted text-xs gap-2">
-                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin text-white' : 'text-hacker-muted'}`} />
-                <span>{loading ? 'Decrypting terminal payloads...' : `No recent packets in #${currentRoom}. Broadcast the first packet below.`}</span>
+              <div className="h-full flex flex-col items-center justify-center text-hacker-muted text-xs gap-2 py-12">
+                {loading ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin text-white" />
+                    <span>Syncing cryptographic mesh packets...</span>
+                  </>
+                ) : (
+                  <>
+                    <Radio className="w-5 h-5 text-zinc-600" />
+                    <span>No recent packets in #{currentRoom}. Broadcast the first packet below.</span>
+                  </>
+                )}
               </div>
             ) : (
               messages.map((msg, idx) => {

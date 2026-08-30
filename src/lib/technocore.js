@@ -141,39 +141,84 @@ export async function readKvNote(fingerprint) {
 }
 
 /**
- * Fetch messages from a Technocore room
+ * Get cached messages from localStorage for 0ms instant render
  */
-export async function fetchRoomMessages(room = 'lobby', limit = 50) {
+export function getCachedRoomMessages(room = 'lobby') {
   try {
-    const response = await fetch(`${TECHNOCORE_BASE_URL}/r/${encodeURIComponent(room)}?format=json&limit=${limit}&t=${Date.now()}`, {
+    const cached = localStorage.getItem(`flop_cached_room_${room}`);
+    return cached ? JSON.parse(cached) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Save messages to localStorage cache
+ */
+export function saveCachedRoomMessages(room = 'lobby', messages = []) {
+  try {
+    if (!messages || !Array.isArray(messages)) return;
+    localStorage.setItem(`flop_cached_room_${room}`, JSON.stringify(messages.slice(-300)));
+  } catch {}
+}
+
+/**
+ * Fetch messages from a Technocore room with ultra-fast timeout and instant cache fallback
+ */
+export async function fetchRoomMessages(room = 'lobby', limit = 100) {
+  const localCache = getCachedRoomMessages(room);
+  const cleanRoom = encodeURIComponent(String(room || 'lobby').trim());
+
+  // Use AbortController for fast 3.5s timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+  try {
+    const response = await fetch(`${TECHNOCORE_BASE_URL}/r/${cleanRoom}?format=json&limit=${limit}&t=${Date.now()}`, {
       cache: 'no-store',
+      signal: controller.signal,
       headers: {
         'Accept': 'application/json'
       }
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${room} room`);
-    }
+    clearTimeout(timeoutId);
 
-    const data = await response.json();
-    return {
-      room: data.room || room,
-      firstSeq: data.first_seq || 0,
-      lastSeq: data.last_seq || 0,
-      count: data.count || 0,
-      messages: data.messages || []
-    };
+    if (response.ok) {
+      const data = await response.json();
+      const serverMsgs = Array.isArray(data.messages) ? data.messages : [];
+      
+      // Merge server messages with locally cached/sent messages
+      const mergedMap = new Map();
+      localCache.forEach((m) => mergedMap.set(m.seq || `${m.nonce}-${m.from}`, m));
+      serverMsgs.forEach((m) => mergedMap.set(m.seq || `${m.nonce}-${m.from}`, m));
+      
+      const sorted = Array.from(mergedMap.values()).sort((a, b) => (a.seq || 0) - (b.seq || 0));
+      saveCachedRoomMessages(room, sorted);
+
+      return {
+        room: data.room || room,
+        firstSeq: data.first_seq || 0,
+        lastSeq: data.last_seq || 0,
+        count: sorted.length,
+        messages: sorted,
+        isLive: true
+      };
+    }
   } catch (err) {
-    console.error('Error fetching room:', err);
-    return {
-      room,
-      firstSeq: 0,
-      lastSeq: 0,
-      count: 0,
-      messages: []
-    };
+    // Network or timeout failure - smoothly fallback to cached messages
+  } finally {
+    clearTimeout(timeoutId);
   }
+
+  return {
+    room,
+    firstSeq: 0,
+    lastSeq: 0,
+    count: localCache.length,
+    messages: localCache,
+    isLive: false
+  };
 }
 
 /**
