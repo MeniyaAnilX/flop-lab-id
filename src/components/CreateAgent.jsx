@@ -230,12 +230,12 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const [creationTab, setCreationTab] = useState('new'); // 'new' | 'restore'
   const [passphrase, setPassphrase] = useState('');
   const [repeatPassphrase, setRepeatPassphrase] = useState('');
   const [passphraseError, setPassphraseError] = useState(null);
   const [encryptedKeyPackage, setEncryptedKeyPackage] = useState(null);
 
-  const [showRestoreBox, setShowRestoreBox] = useState(false);
   const [restoreSeedText, setRestoreSeedText] = useState('');
   const [restorePassphrase, setRestorePassphrase] = useState('');
   const [restoreError, setRestoreError] = useState(null);
@@ -715,7 +715,44 @@ Positioned and ready for $FLOP.` : '';
           </div>
 
           {!identity ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
+              {/* Clean Top Tab Switcher */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreationTab('new');
+                    setPassphraseError(null);
+                    setRestoreError(null);
+                  }}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                    creationTab === 'new'
+                      ? 'btn-white shadow-sm'
+                      : 'bg-black border-hacker-border text-hacker-muted hover:text-white'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Create New Key</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreationTab('restore');
+                    setPassphraseError(null);
+                    setRestoreError(null);
+                  }}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                    creationTab === 'restore'
+                      ? 'btn-white shadow-sm'
+                      : 'bg-black border-hacker-border text-hacker-muted hover:text-white'
+                  }`}
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  <span>I Already Have a Key</span>
+                </button>
+              </div>
+
               {/* Security Pill */}
               <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-[11px] text-hacker-muted flex items-start gap-2">
                 <ShieldAlert className="w-4 h-4 text-hacker-green flex-shrink-0 mt-0.5" />
@@ -724,95 +761,104 @@ Positioned and ready for $FLOP.` : '';
                 </span>
               </div>
 
-              {/* Passphrase inputs */}
-              <div className="space-y-2.5 pt-1">
-                <div className="space-y-1">
-                  <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
-                    MASTER PASSPHRASE (MINIMUM 8 CHARACTERS):
-                  </label>
-                  <input
-                    type="password"
-                    value={passphrase}
-                    onChange={(e) => {
-                      setPassphrase(e.target.value);
-                      if (passphraseError) setPassphraseError(null);
-                    }}
-                    placeholder="Strong passphrase · minimum 8 characters"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
-                  />
-                </div>
+              {/* TAB 1: CREATE NEW KEY */}
+              {creationTab === 'new' && (
+                <div className="space-y-3 animate-fadeIn">
+                  <div className="space-y-2.5">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
+                        MASTER PASSPHRASE (MINIMUM 8 CHARACTERS):
+                      </label>
+                      <input
+                        type="password"
+                        value={passphrase}
+                        onChange={(e) => {
+                          setPassphrase(e.target.value);
+                          if (passphraseError) setPassphraseError(null);
+                        }}
+                        placeholder="Strong passphrase · minimum 8 characters"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                      />
+                    </div>
 
-                <div className="space-y-1">
-                  <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
-                    REPEAT PASSPHRASE:
-                  </label>
-                  <input
-                    type="password"
-                    value={repeatPassphrase}
-                    onChange={(e) => {
-                      setRepeatPassphrase(e.target.value);
-                      if (passphraseError) setPassphraseError(null);
-                    }}
-                    placeholder="Repeat passphrase"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
-                  />
-                </div>
-              </div>
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
+                        REPEAT PASSPHRASE:
+                      </label>
+                      <input
+                        type="password"
+                        value={repeatPassphrase}
+                        onChange={(e) => {
+                          setRepeatPassphrase(e.target.value);
+                          if (passphraseError) setPassphraseError(null);
+                        }}
+                        placeholder="Repeat passphrase"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                      />
+                    </div>
+                  </div>
 
-              {passphraseError && (
-                <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold flex items-center gap-2 animate-fadeIn">
-                  <ShieldAlert className="w-4 h-4 flex-shrink-0" />
-                  <span>{passphraseError}</span>
+                  {passphraseError && (
+                    <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                      <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+                      <span>{passphraseError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleCreateIdentity}
+                    className="btn-white w-full py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer mt-1"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Create My Identity</span>
+                  </button>
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                <button
-                  onClick={handleCreateIdentity}
-                  className="btn-white py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Create My Identity</span>
-                </button>
+              {/* TAB 2: RESTORE EXISTING KEY */}
+              {creationTab === 'restore' && (
+                <div className="space-y-3 animate-fadeIn">
+                  <div className="space-y-2.5">
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
+                        PASTE 64-HEX SEED OR BACKUP JSON:
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={restoreSeedText}
+                        onChange={(e) => setRestoreSeedText(e.target.value)}
+                        placeholder="Paste 64-hex seed or exported backup JSON content..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white resize-none"
+                      />
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowRestoreBox(!showRestoreBox)}
-                  className="btn-outline py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-hacker-border hover:border-white"
-                >
-                  <Key className="w-4 h-4" />
-                  <span>I Already Have a Key</span>
-                </button>
-              </div>
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-hacker-muted font-bold uppercase tracking-wider">
+                        PASSPHRASE (IF BACKUP IS ENCRYPTED):
+                      </label>
+                      <input
+                        type="password"
+                        value={restorePassphrase}
+                        onChange={(e) => setRestorePassphrase(e.target.value)}
+                        placeholder="Enter 8-digit passphrase..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                      />
+                    </div>
+                  </div>
 
-              {showRestoreBox && (
-                <div className="p-4 rounded-xl bg-black border border-white/20 space-y-2.5 animate-fadeIn mt-2">
-                  <span className="text-[11px] font-bold text-white uppercase block">
-                    Restore Existing Identity (64-Hex Seed or Backup JSON):
-                  </span>
-                  <input
-                    type="password"
-                    value={restoreSeedText}
-                    onChange={(e) => setRestoreSeedText(e.target.value)}
-                    placeholder="Paste 64-hex seed or backup JSON content..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
-                  />
-                  <input
-                    type="password"
-                    value={restorePassphrase}
-                    onChange={(e) => setRestorePassphrase(e.target.value)}
-                    placeholder="Enter 8-digit passphrase (if backup is encrypted)..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#09090b] border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
-                  />
                   {restoreError && (
-                    <p className="text-xs text-red-400 font-bold">{restoreError}</p>
+                    <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                      <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+                      <span>{restoreError}</span>
+                    </div>
                   )}
+
                   <button
                     type="button"
                     onClick={handleRestoreIdentity}
-                    className="btn-white w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                    className="btn-white w-full py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer mt-1"
                   >
-                    <Check className="w-3.5 h-3.5" />
+                    <Check className="w-4 h-4" />
                     <span>Unlock & Restore Identity</span>
                   </button>
                 </div>
