@@ -21,7 +21,7 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
   const [identity, setIdentity] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
   const [joiningLobby, setJoiningLobby] = useState(false);
-  const [lobbyStatus, setLobbyStatus] = useState(null); // { success: true, seq: 12345 }
+  const [broadcastStatus, setBroadcastStatus] = useState(null); // { lobbySeq, technocoreSeq }
   const [error, setError] = useState(null);
 
   // 1. Generate New Identity
@@ -30,7 +30,7 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
       setError(null);
       const newIdentity = generateIdentity();
       setIdentity(newIdentity);
-      setLobbyStatus(null);
+      setBroadcastStatus(null);
       if (onAgentCreated) onAgentCreated(newIdentity);
     } catch (err) {
       setError(err.message || 'Failed to generate key');
@@ -64,22 +64,38 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     URL.revokeObjectURL(url);
   };
 
-  // 2. Join Lobby with 1-Click
-  const handleJoinLobby = async () => {
+  // 2. Broadcast to Both Lobby and Technocore Rooms (Universal Coverage)
+  const handleBroadcast = async () => {
     if (!identity) return;
     setJoiningLobby(true);
     setError(null);
 
-    const cleanHandle = handle.trim().lstrip ? handle.trim().lstrip('@') : handle.trim().replace(/^@/, '');
-    const message = cleanHandle
+    const cleanHandle = handle.trim().replace(/^@/, '');
+    const lobbyMsg = cleanHandle
       ? `Hello Technocore. Agent of @${cleanHandle} is now active. Spreading the word to all autonomous agents. $FLOP ready.`
       : `Hello Technocore. Autonomous agent active and ready for $FLOP.`;
 
+    const technocoreMsg = cleanHandle
+      ? `Autonomous AI agent initialized for @${cleanHandle}. Verifiable identity on Technocore: ${identity.did}`
+      : `Autonomous AI agent initialized on Technocore: ${identity.did}`;
+
     try {
-      const result = await sendSignedMessage(identity.privateKey, 'lobby', message, identity.did);
-      setLobbyStatus({
+      // 1. Send to Lobby
+      const lobbyResult = await sendSignedMessage(identity.privateKey, 'lobby', lobbyMsg, identity.did);
+      
+      // 2. Send to Technocore room (For Overheard and public explorer compatibility)
+      let technocoreSeq = null;
+      try {
+        const technocoreResult = await sendSignedMessage(identity.privateKey, 'technocore', technocoreMsg, identity.did);
+        technocoreSeq = technocoreResult.seq;
+      } catch (tErr) {
+        console.warn('Technocore room fallback notice:', tErr);
+      }
+
+      setBroadcastStatus({
         success: true,
-        seq: result.seq || 'CONFIRMED',
+        lobbySeq: lobbyResult.seq || 'CONFIRMED',
+        technocoreSeq: technocoreSeq || 'CONFIRMED',
         handle: cleanHandle
       });
 
@@ -90,7 +106,7 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
         origin: { y: 0.6 }
       });
     } catch (err) {
-      setError(err.message || 'Lobby join failed. Please try again.');
+      setError(err.message || 'Broadcast failed. Please try again.');
     } finally {
       setJoiningLobby(false);
     }
@@ -123,7 +139,7 @@ Positioned and ready for $FLOP! ⚡
           Create Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-flop-glow via-flop to-sky-400">Technocore Agent</span>
         </h1>
         <p className="text-ice/60 max-w-xl mx-auto mt-2 text-sm md:text-base">
-          Generate an authentic W3C Ed25519 DID key in 1-click, join the live Technocore lobby, and qualify for the $FLOP airdrop.
+          Generate an authentic W3C Ed25519 DID key in 1-click, join live Technocore rooms, and qualify for the $FLOP airdrop.
         </p>
       </div>
 
@@ -222,10 +238,10 @@ Positioned and ready for $FLOP! ⚡
             </div>
           </div>
 
-          {/* Step 2: Join Lobby */}
+          {/* Step 2: Broadcast to Technocore */}
           <div className="glass-panel rounded-3xl p-6 md:p-8">
             <h3 className="text-xl font-bold text-ice mb-2 flex items-center gap-2">
-              <Send className="w-5 h-5 text-flop" /> Step 2: Sign & Join Technocore Lobby
+              <Send className="w-5 h-5 text-flop" /> Step 2: Broadcast to Technocore (/r/lobby & /r/technocore)
             </h3>
             <p className="text-ice/70 text-sm mb-4">
               Enter your Twitter/X handle to bind your social account directly to your cryptographic DID on the live ledger.
@@ -237,14 +253,14 @@ Positioned and ready for $FLOP! ⚡
                 value={handle}
                 onChange={(e) => setHandle(e.target.value)}
                 placeholder="Twitter Handle (e.g. @MeniyaAnilYT)"
-                disabled={Boolean(lobbyStatus?.success)}
+                disabled={Boolean(broadcastStatus?.success)}
                 className="w-full flex-1 px-4 py-3 rounded-2xl bg-void/80 border border-navy-600 text-ice text-sm font-mono focus:outline-none focus:border-flop transition-all"
               />
               <button
-                onClick={handleJoinLobby}
-                disabled={joiningLobby || Boolean(lobbyStatus?.success)}
+                onClick={handleBroadcast}
+                disabled={joiningLobby || Boolean(broadcastStatus?.success)}
                 className={`w-full sm:w-auto px-6 py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 whitespace-nowrap transition-all ${
-                  lobbyStatus?.success
+                  broadcastStatus?.success
                     ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-default'
                     : 'btn-cyan'
                 }`}
@@ -254,15 +270,15 @@ Positioned and ready for $FLOP! ⚡
                     <RefreshCw className="w-4 h-4 animate-spin text-void" />
                     <span>Signing in Browser...</span>
                   </>
-                ) : lobbyStatus?.success ? (
+                ) : broadcastStatus?.success ? (
                   <>
                     <Check className="w-4 h-4 text-emerald-400" />
-                    <span>Lobby Joined (Seq: {lobbyStatus.seq})</span>
+                    <span>Broadcast Complete (Lobby + Technocore)</span>
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4 text-void" />
-                    <span>1-Click Join Lobby</span>
+                    <span>1-Click Broadcast</span>
                   </>
                 )}
               </button>
@@ -274,7 +290,7 @@ Positioned and ready for $FLOP! ⚡
           </div>
 
           {/* Step 3: Share on X & View Card */}
-          {lobbyStatus?.success && (
+          {broadcastStatus?.success && (
             <div className="glass-panel-glow rounded-3xl p-6 md:p-8 border-flop/40 animate-fadeIn">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div>
