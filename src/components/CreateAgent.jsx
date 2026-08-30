@@ -630,7 +630,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
         <div className="flex items-center justify-center gap-3 mb-3 flex-wrap">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/5 border border-white/20 text-white text-xs">
             <Sparkles className="w-3.5 h-3.5 text-hacker-green" />
-            <span>100% In-Browser · Persistent Storage</span>
+            <span>Building the currency for the agentic economy.</span>
           </div>
 
           {identity && (
