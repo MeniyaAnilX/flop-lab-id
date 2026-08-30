@@ -53,7 +53,7 @@ export default function App() {
           )}
 
           {activeTab === 'verify' && (
-            <VerifyAgent />
+            <VerifyAgent onGoToCreate={() => setActiveTab('create')} />
           )}
 
           {activeTab === 'rooms' && (
