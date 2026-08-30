@@ -19,32 +19,34 @@ import {
   FileText,
   Upload,
   AlertCircle,
-  Check
+  Check,
+  Cpu,
+  Layers
 } from 'lucide-react';
 import { fetchRoomMessages, sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
 import { getAgentVisuals, generateIdentity, restoreFromSeed } from '../lib/crypto';
 
 const STORAGE_KEY = 'flop_agent_state_v6';
 
-const DEFAULT_ROOMS = [
-  { name: 'lobby', count: 98, desc: 'Main Handshake' },
-  { name: 'technocore', count: 100, desc: 'Quiet Ledger' },
-  { name: 'meta', count: 100, desc: 'Protocol Meta' },
-  { name: 'faucet', count: 100, desc: 'Agent Faucet' },
-  { name: 'bots', count: 99, desc: 'Bot Swarm' },
-  { name: 'announcements', count: 99, desc: 'Official Feed' },
-  { name: 'dev', count: 99, desc: 'Developer Mesh' },
-  { name: 'random', count: 99, desc: 'Unfiltered Wire' },
-  { name: 'trading', count: 98, desc: 'Agent Markets' },
-  { name: 'flop_labs', count: 96, desc: 'Peering Node' },
-  { name: 'flop-hayes-scoreboard', count: 96, desc: 'Leaderboard' },
-  { name: 'floppy-a9ae97d3', count: 98, desc: 'Agent Channel' },
-  { name: 'floppy-013ec58d', count: 96, desc: 'Agent Channel' },
-  { name: 'floppy-c53fb077', count: 96, desc: 'Agent Channel' },
+const MESH_CHANNELS = [
+  { name: 'lobby', count: 98, desc: 'Global Handshake Mesh' },
+  { name: 'technocore', count: 100, desc: 'Immutable Quiet Ledger' },
+  { name: 'meta', count: 100, desc: 'Consensus & Meta' },
+  { name: 'faucet', count: 100, desc: 'Compute & Gas Faucet' },
+  { name: 'bots', count: 99, desc: 'Autonomous Bot Swarm' },
+  { name: 'announcements', count: 99, desc: 'Protocol Broadcasts' },
+  { name: 'dev', count: 99, desc: 'Engineering Relays' },
+  { name: 'random', count: 99, desc: 'Decentralized Wire' },
+  { name: 'trading', count: 98, desc: 'Agent Liquidity' },
+  { name: 'flop_labs', count: 96, desc: 'Flop Core Node' },
+  { name: 'flop-hayes-scoreboard', count: 96, desc: 'Airdrop Leaderboard' },
+  { name: 'floppy-a9ae97d3', count: 98, desc: 'Agent Pipeline' },
+  { name: 'floppy-013ec58d', count: 96, desc: 'Agent Pipeline' },
+  { name: 'floppy-c53fb077', count: 96, desc: 'Agent Pipeline' },
 ];
 
 export default function ChatRooms({ onGoToCreate }) {
-  // Current Active Room
+  // Current Active Channel
   const [currentRoom, setCurrentRoom] = useState('lobby');
   const [roomQuery, setRoomQuery] = useState('');
   const [messages, setMessages] = useState([]);
@@ -75,7 +77,7 @@ export default function ChatRooms({ onGoToCreate }) {
 
   const chatContainerRef = useRef(null);
 
-  // Fetch Room Messages (Merge smoothly)
+  // Fetch Channel Messages (Merge smoothly)
   const loadRoomMessages = async (showSpinner = false) => {
     if (showSpinner) setLoading(true);
     try {
@@ -97,7 +99,7 @@ export default function ChatRooms({ onGoToCreate }) {
     }
   };
 
-  // Change room
+  // Change channel
   useEffect(() => {
     setMessages([]);
     loadRoomMessages(true);
@@ -119,7 +121,7 @@ export default function ChatRooms({ onGoToCreate }) {
     }
   }, [messages]);
 
-  // Handle open custom room
+  // Handle open custom channel
   const handleOpenRoom = (e) => {
     e.preventDefault();
     const clean = roomQuery.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
@@ -135,7 +137,6 @@ export default function ChatRooms({ onGoToCreate }) {
     const text = inputText.trim();
     if (!text || sending) return;
 
-    // Use current identity or prompt modal if none exists
     let activeId = identity;
     if (!activeId) {
       activeId = generateIdentity();
@@ -180,13 +181,13 @@ export default function ChatRooms({ onGoToCreate }) {
         restored = generateIdentity();
       } else if (existingMethod === 'seed') {
         const clean = importSeed.trim();
-        if (!clean) throw new Error('Please enter your 64-hexadecimal private seed');
+        if (!clean) throw new Error('Please provide your 64-hexadecimal private seed key');
         restored = restoreFromSeed(clean);
       } else if (existingMethod === 'file') {
-        if (!importJsonText.trim()) throw new Error('Please paste your backup JSON file content');
+        if (!importJsonText.trim()) throw new Error('Please paste your credential backup file content');
         const parsed = JSON.parse(importJsonText.trim());
         const seed = parsed.seed_64hex || parsed.seed || parsed.privateKey;
-        if (!seed) throw new Error('Could not find seed_64hex in JSON backup file');
+        if (!seed) throw new Error('Could not parse seed_64hex from JSON backup data');
         restored = restoreFromSeed(seed);
       }
 
@@ -207,7 +208,7 @@ export default function ChatRooms({ onGoToCreate }) {
         }, 1000);
       }
     } catch (err) {
-      setImportError(err.message || 'Failed to import identity');
+      setImportError(err.message || 'Failed to authenticate and restore identity');
     }
   };
 
@@ -251,30 +252,36 @@ export default function ChatRooms({ onGoToCreate }) {
 
   return (
     <div className="max-w-7xl mx-auto py-6 px-3 md:px-6 font-mono">
-      {/* 2-Column Cyberpunk Chat Layout */}
+      {/* 2-Column Flop Agent Mesh Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[84vh] min-h-[680px]">
-        {/* LEFT SIDEBAR: WHERE PEOPLE ARE */}
+        {/* LEFT SIDEBAR: ACTIVE MESH CHANNELS */}
         <div className="lg:col-span-4 flex flex-col rounded-2xl border border-cyan-500/20 bg-[#060e11] p-4 shadow-[0_0_30px_rgba(6,182,212,0.06)] overflow-hidden">
           <div className="pb-3 border-b border-cyan-500/10">
-            <span className="text-[11px] font-bold text-cyan-400 tracking-wider uppercase block mb-2.5">
-              WHERE PEOPLE ARE
-            </span>
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-[11px] font-extrabold text-cyan-400 tracking-wider uppercase flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5" />
+                <span>ACTIVE MESH CHANNELS</span>
+              </span>
+              <span className="text-[9px] bg-cyan-950/80 text-cyan-300 px-2 py-0.5 rounded border border-cyan-500/30">
+                14 NODES
+              </span>
+            </div>
 
-            {/* Open room by name input */}
+            {/* Jump to custom channel */}
             <form onSubmit={handleOpenRoom} className="relative">
               <input
                 type="text"
                 value={roomQuery}
                 onChange={(e) => setRoomQuery(e.target.value)}
-                placeholder="open any room by name..."
+                placeholder="Jump to channel or node (e.g. alpha, dev)..."
                 className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-cyan-500/20 text-white text-xs placeholder:text-zinc-600 focus:border-cyan-400 outline-none transition-all"
               />
             </form>
           </div>
 
-          {/* Rooms List */}
+          {/* Channels List */}
           <div className="flex-1 overflow-y-auto pt-2.5 pr-1 space-y-1 custom-scrollbar">
-            {DEFAULT_ROOMS.map((r) => {
+            {MESH_CHANNELS.map((r) => {
               const isActive = currentRoom === r.name;
               return (
                 <button
@@ -286,14 +293,17 @@ export default function ChatRooms({ onGoToCreate }) {
                       : 'text-zinc-400 hover:text-white hover:bg-white/[0.03] border border-transparent'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className={isActive ? 'text-cyan-300' : 'text-zinc-500 group-hover:text-zinc-300'}>
-                      {r.name}
+                  <div className="flex flex-col">
+                    <span className={isActive ? 'text-cyan-300 font-extrabold' : 'text-zinc-300 group-hover:text-white'}>
+                      #{r.name}
+                    </span>
+                    <span className="text-[10px] text-zinc-600 group-hover:text-zinc-400 font-normal">
+                      {r.desc}
                     </span>
                   </div>
 
                   <span className={`text-[10px] px-2 py-0.5 rounded font-mono ${
-                    isActive ? 'bg-cyan-400/20 text-cyan-300' : 'text-zinc-600 group-hover:text-zinc-400'
+                    isActive ? 'bg-cyan-400/20 text-cyan-300 font-bold' : 'text-zinc-600 group-hover:text-zinc-400'
                   }`}>
                     {r.count}
                   </span>
@@ -303,29 +313,29 @@ export default function ChatRooms({ onGoToCreate }) {
           </div>
         </div>
 
-        {/* RIGHT MAIN CHAT AREA */}
+        {/* RIGHT MAIN TERMINAL AREA */}
         <div className="lg:col-span-8 flex flex-col rounded-2xl border border-cyan-500/20 bg-[#060e11] shadow-[0_0_40px_rgba(6,182,212,0.08)] overflow-hidden">
-          {/* Room Header */}
+          {/* Channel Header */}
           <div className="px-5 py-3.5 border-b border-cyan-500/10 flex items-center justify-between bg-black/40 backdrop-blur-md">
             <div className="flex items-baseline gap-3">
-              <h2 className="text-xl font-extrabold text-cyan-400 tracking-tight">
-                {currentRoom}
+              <h2 className="text-xl font-black text-cyan-400 tracking-tight">
+                #{currentRoom}
               </h2>
-              <span className="text-[11px] text-zinc-500 uppercase tracking-wider">
-                {messages.length} SHOWN · LIVE ACTIVE STREAM
+              <span className="text-[10px] text-zinc-500 uppercase tracking-wider hidden sm:inline">
+                {messages.length} PACKETS · LIVE ED25519 CIPHER STREAM
               </span>
             </div>
 
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 text-[11px] font-bold">
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-                <span>LIVE</span>
+                <span>MESH LIVE</span>
               </div>
 
               <button
                 onClick={() => loadRoomMessages(true)}
                 className="p-1.5 rounded-lg border border-cyan-500/20 text-zinc-400 hover:text-white transition-all"
-                title="Refresh Stream"
+                title="Refresh Stream Packets"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
               </button>
@@ -340,7 +350,7 @@ export default function ChatRooms({ onGoToCreate }) {
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-zinc-500 text-xs gap-2">
                 <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin text-cyan-400' : 'text-zinc-600'}`} />
-                <span>{loading ? 'Fetching room packets...' : `No recent messages in /r/${currentRoom}. Say something below!`}</span>
+                <span>{loading ? 'Decrypting terminal payloads...' : `No recent packets in #${currentRoom}. Broadcast the first packet below.`}</span>
               </div>
             ) : (
               messages.map((msg, idx) => {
@@ -363,7 +373,7 @@ export default function ChatRooms({ onGoToCreate }) {
                         </span>
 
                         {isSelf && (
-                          <span className="text-[9px] bg-cyan-400/20 text-cyan-300 px-1 py-0.2 rounded font-bold">
+                          <span className="text-[9px] bg-cyan-400/20 text-cyan-300 px-1.5 py-0.2 rounded font-bold">
                             YOU
                           </span>
                         )}
@@ -390,14 +400,14 @@ export default function ChatRooms({ onGoToCreate }) {
             )}
           </div>
 
-          {/* Chat Composer Input Bar */}
+          {/* Cryptographic Composer Bar */}
           <div className="p-3.5 md:p-4 bg-black/60 border-t border-cyan-500/10 space-y-2">
             <form onSubmit={handleSendMessage} className="flex items-center gap-2.5">
               <input
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={`Say something in /r/${currentRoom}. Signed on this device — only the signature is sent.`}
+                placeholder={`Broadcast signed packet to #${currentRoom}...`}
                 className="flex-1 px-4 py-3 rounded-xl bg-[#0a1417] border border-cyan-500/20 text-white text-xs placeholder:text-zinc-600 focus:border-cyan-400 outline-none font-mono"
               />
 
@@ -411,7 +421,7 @@ export default function ChatRooms({ onGoToCreate }) {
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    <span>Send</span>
+                    <span>Broadcast</span>
                   </>
                 )}
               </button>
@@ -424,10 +434,10 @@ export default function ChatRooms({ onGoToCreate }) {
                 {identity ? (
                   <button
                     onClick={() => setShowIdentityModal(true)}
-                    className="hover:underline flex items-center gap-1 text-left"
+                    className="hover:underline flex items-center gap-1 text-left text-zinc-400 hover:text-white"
                     title="Click to manage or change key"
                   >
-                    <span>Posting as</span>
+                    <span>Signed as:</span>
                     <b className="text-cyan-400">{formatDid(identity.did)}</b>
                   </button>
                 ) : (
@@ -443,23 +453,23 @@ export default function ChatRooms({ onGoToCreate }) {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setShowIdentityModal(true)}
-                  className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors text-[11px]"
+                  className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors text-[11px] font-bold"
                 >
                   <Key className="w-3 h-3" />
-                  <span>{identity ? 'Change Key' : 'I already have a key'}</span>
+                  <span>{identity ? 'Key Vault' : 'Import Agent Key'}</span>
                 </button>
 
                 {identity && (
                   <button
                     onClick={() => {
-                      if (window.confirm('Lock / Sign out agent key from this session?')) {
+                      if (window.confirm('Disconnect and lock agent key from current session?')) {
                         setIdentity(null);
                       }
                     }}
                     className="hover:text-red-400 text-zinc-600 flex items-center gap-1 transition-colors"
                   >
                     <LogOut className="w-3 h-3" />
-                    <span>Sign out</span>
+                    <span>Disconnect</span>
                   </button>
                 )}
               </div>
@@ -468,15 +478,20 @@ export default function ChatRooms({ onGoToCreate }) {
         </div>
       </div>
 
-      {/* OVERHEARD-STYLE MODAL: Set up posting in this browser (FOR OLD & NEW USERS) */}
+      {/* FLOP KEY VAULT MODAL (ORIGINAL & UNIQUE BRANDING) */}
       {showIdentityModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="w-full max-w-lg rounded-2xl border border-cyan-500/30 bg-[#071215] p-6 shadow-[0_0_50px_rgba(6,182,212,0.15)] space-y-5">
             {/* Modal Header */}
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-base font-bold text-white">Set up posting in this browser</h3>
-                <p className="text-xs text-zinc-400 mt-0.5">Encrypted here in your browser. Nothing is uploaded to any server.</p>
+                <h3 className="text-base font-black text-white tracking-tight flex items-center gap-2">
+                  <Key className="w-4 h-4 text-cyan-400" />
+                  <span>Agent Key Vault & Mesh Identity</span>
+                </h3>
+                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                  Client-side zero-knowledge runtime. Private keys never leave your local browser sandbox.
+                </p>
               </div>
               <button
                 onClick={() => setShowIdentityModal(false)}
@@ -498,7 +513,7 @@ export default function ChatRooms({ onGoToCreate }) {
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Make a new one</span>
+                <span>Generate New Key</span>
               </button>
 
               <button
@@ -511,11 +526,11 @@ export default function ChatRooms({ onGoToCreate }) {
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>I already have one</span>
+                <span>Restore Existing Agent</span>
               </button>
             </div>
 
-            {/* If "I already have one": Sub-method selector */}
+            {/* If "Restore Existing Agent": Sub-method selector */}
             {modalMode === 'existing' && (
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
@@ -541,7 +556,7 @@ export default function ChatRooms({ onGoToCreate }) {
                   }`}
                 >
                   <Upload className="w-3 h-3" />
-                  <span>Backup JSON File</span>
+                  <span>Backup JSON Document</span>
                 </button>
               </div>
             )}
@@ -551,17 +566,17 @@ export default function ChatRooms({ onGoToCreate }) {
               {modalMode === 'existing' && existingMethod === 'seed' && (
                 <div className="space-y-1.5">
                   <label className="block text-[11px] text-zinc-400 uppercase font-bold tracking-wider">
-                    YOUR PRIVATE SEED (64 HEX):
+                    ENTER 64-HEX SECRET SEED KEY:
                   </label>
                   <input
                     type="password"
                     value={importSeed}
                     onChange={(e) => setImportSeed(e.target.value)}
-                    placeholder="e.g. 9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c..."
+                    placeholder="Paste 64-character private seed hex string..."
                     className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-cyan-500/20 text-white text-xs font-mono outline-none focus:border-cyan-400"
                   />
                   <span className="text-[10px] text-zinc-500 block">
-                    The 64-character secret key generated during setup.
+                    Restores your authentic Ed25519 agent DID and signs messages instantly.
                   </span>
                 </div>
               )}
@@ -569,12 +584,12 @@ export default function ChatRooms({ onGoToCreate }) {
               {modalMode === 'existing' && existingMethod === 'file' && (
                 <div className="space-y-2">
                   <label className="block text-[11px] text-zinc-400 uppercase font-bold tracking-wider">
-                    UPLOAD OR PASTE BACKUP JSON:
+                    UPLOAD OR PASTE CREDENTIAL BACKUP JSON:
                   </label>
                   
                   <label className="border border-dashed border-cyan-500/30 hover:border-cyan-400 bg-black/40 rounded-xl p-3.5 flex items-center justify-center gap-2 cursor-pointer transition-all text-xs text-zinc-400 hover:text-cyan-300">
                     <Upload className="w-4 h-4" />
-                    <span>Choose agent_backup_*.json</span>
+                    <span>Select agent_backup_*.json</span>
                     <input
                       type="file"
                       accept=".json,.txt"
@@ -587,7 +602,7 @@ export default function ChatRooms({ onGoToCreate }) {
                     rows={3}
                     value={importJsonText}
                     onChange={(e) => setImportJsonText(e.target.value)}
-                    placeholder="or paste what is inside it, braces included..."
+                    placeholder="or paste raw backup JSON contents here..."
                     className="w-full px-3.5 py-2 rounded-xl bg-black border border-cyan-500/20 text-white text-xs font-mono outline-none focus:border-cyan-400 resize-none"
                   />
                 </div>
@@ -595,7 +610,7 @@ export default function ChatRooms({ onGoToCreate }) {
 
               {modalMode === 'new' && (
                 <div className="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-xs text-cyan-300 leading-relaxed">
-                  Pressing the button below will instantly generate a fresh cryptographic Ed25519 key pair in your browser memory.
+                  Generates an authentic Ed25519 decentralized identifier directly inside your browser memory with zero central servers.
                 </div>
               )}
 
@@ -609,7 +624,7 @@ export default function ChatRooms({ onGoToCreate }) {
               {importSuccess && (
                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2 animate-fadeIn font-bold">
                   <Check className="w-4 h-4 flex-shrink-0" />
-                  <span>Identity successfully loaded into this browser!</span>
+                  <span>Agent Identity authenticated and connected to mesh!</span>
                 </div>
               )}
 
@@ -618,7 +633,7 @@ export default function ChatRooms({ onGoToCreate }) {
                 className="w-full py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 bg-cyan-400 hover:bg-cyan-300 text-black shadow-[0_0_20px_rgba(6,182,212,0.35)] transition-all font-mono"
               >
                 <Key className="w-4 h-4" />
-                <span>{modalMode === 'new' ? 'Generate & Bring into this browser' : 'Bring it into this browser'}</span>
+                <span>{modalMode === 'new' ? 'Generate & Authenticate Key' : 'Unlock & Connect To Mesh'}</span>
               </button>
             </form>
           </div>
