@@ -91,15 +91,20 @@ export default function ChatRooms({ onGoToCreate }) {
   const loadRoomMessages = async (showSpinner = false) => {
     if (showSpinner) setLoading(true);
     try {
-      const data = await fetchRoomMessages(currentRoom, 200);
+      const data = await fetchRoomMessages(currentRoom, 150);
       setIsMeshLive(data.isLive !== false);
       if (data.messages && data.messages.length > 0) {
         setMessages((prev) => {
           const map = new Map();
-          data.messages.forEach((m) => map.set(m.seq || `${m.nonce}-${m.from}`, m));
+          // Retain all previous messages including user's own sent packets
           prev.forEach((m) => {
             const id = m.seq || `${m.nonce}-${m.from}`;
-            if (!map.has(id)) map.set(id, m);
+            map.set(id, m);
+          });
+          // Merge incoming stream packets
+          data.messages.forEach((m) => {
+            const id = m.seq || `${m.nonce}-${m.from}`;
+            map.set(id, m);
           });
           const sorted = Array.from(map.values()).sort((a, b) => (a.seq || 0) - (b.seq || 0));
           return sorted.slice(-300);
@@ -119,12 +124,12 @@ export default function ChatRooms({ onGoToCreate }) {
     loadRoomMessages(true);
   }, [currentRoom]);
 
-  // Auto-refresh interval (every 3 seconds)
+  // Auto-refresh interval (smooth 6 seconds to prevent screen jumping)
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
       loadRoomMessages(false);
-    }, 3000);
+    }, 6000);
     return () => clearInterval(interval);
   }, [currentRoom, autoRefresh]);
 
@@ -169,13 +174,16 @@ export default function ChatRooms({ onGoToCreate }) {
         ts: res.timestamp || new Date().toISOString(),
         from: activeId.did,
         text: text,
-        nonce: Date.now()
+        nonce: String(Date.now()),
+        isSelf: true
       };
 
       setMessages((prev) => [...prev, optimisticMsg]);
       setInputText('');
       
-      setTimeout(() => loadRoomMessages(false), 800);
+      setTimeout(() => {
+        chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
+      }, 50);
     } catch (err) {
       console.error('Send error:', err);
     } finally {
@@ -401,26 +409,33 @@ export default function ChatRooms({ onGoToCreate }) {
             ) : (
               messages.map((msg, idx) => {
                 const isDid = (msg.from || '').startsWith('did:key:');
-                const isSelf = identity?.did && msg.from === identity.did;
-                const avatarText = isDid ? 'z6' : (msg.from || 'an').slice(0, 2).toUpperCase();
+                const isSelf = Boolean(identity?.did && msg.from === identity.did) || Boolean(msg.isSelf);
+                const avatarText = isSelf ? 'ME' : isDid ? 'z6' : (msg.from || 'an').slice(0, 2).toUpperCase();
 
                 return (
-                  <div key={msg.seq || `${msg.nonce}-${idx}`} className="flex items-start gap-3 animate-fadeIn">
+                  <div 
+                    key={msg.seq || `${msg.nonce}-${idx}`} 
+                    className={`flex items-start gap-3 p-2.5 rounded-2xl transition-all animate-fadeIn ${
+                      isSelf ? 'bg-hacker-green/[0.05] border border-hacker-green/30' : ''
+                    }`}
+                  >
                     {/* Avatar Badge */}
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-extrabold flex-shrink-0 mt-0.5 shadow-sm ${getAvatarColor(msg.from)}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-extrabold flex-shrink-0 mt-0.5 shadow-sm ${
+                      isSelf ? 'bg-hacker-green text-black font-black' : getAvatarColor(msg.from)
+                    }`}>
                       {avatarText}
                     </div>
 
                     {/* Message Body */}
-                    <div className="flex-1 space-y-1 min-w-0">
+                    <div className="flex-1 space-y-1.5 min-w-0">
                       <div className="flex items-center gap-2 text-[11px] leading-none flex-wrap">
-                        <span className={`font-bold ${isSelf ? 'text-hacker-green underline' : isDid ? 'text-white' : 'text-hacker-dim'}`}>
+                        <span className={`font-mono ${isSelf ? 'font-black text-hacker-green' : isDid ? 'font-bold text-white' : 'text-hacker-dim'}`}>
                           {formatDid(msg.from)}
                         </span>
 
                         {isSelf && (
-                          <span className="text-[9px] bg-hacker-green/20 text-hacker-green px-1.5 py-0.2 rounded font-bold">
-                            YOU
+                          <span className="text-[9px] bg-hacker-green text-black px-2 py-0.5 rounded font-black tracking-wider shadow-sm flex items-center gap-1">
+                            ● YOU (MY AGENT)
                           </span>
                         )}
 
@@ -436,7 +451,11 @@ export default function ChatRooms({ onGoToCreate }) {
                       </div>
 
                       {/* Chat Bubble */}
-                      <div className="inline-block px-4 py-2.5 rounded-2xl bg-black border border-hacker-border text-white text-xs leading-relaxed max-w-2xl break-words shadow-sm">
+                      <div className={`inline-block px-4 py-2.5 rounded-2xl text-xs leading-relaxed max-w-2xl break-words shadow-sm ${
+                        isSelf 
+                          ? 'bg-hacker-green/15 border-2 border-hacker-green/60 text-white font-medium shadow-[0_0_20px_rgba(34,197,94,0.15)] ring-1 ring-hacker-green/30' 
+                          : 'bg-black border border-hacker-border text-white'
+                      }`}>
                         {msg.text}
                       </div>
                     </div>
