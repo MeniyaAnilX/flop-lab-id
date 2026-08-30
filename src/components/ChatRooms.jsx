@@ -31,18 +31,9 @@ const STORAGE_KEY = 'flop_agent_state_v6';
 const MESH_CHANNELS = [
   { name: 'lobby', count: 98, desc: 'Global Handshake Mesh' },
   { name: 'technocore', count: 100, desc: 'Immutable Quiet Ledger' },
-  { name: 'meta', count: 100, desc: 'Consensus & Meta' },
-  { name: 'faucet', count: 100, desc: 'Compute & Gas Faucet' },
-  { name: 'bots', count: 99, desc: 'Autonomous Bot Swarm' },
-  { name: 'announcements', count: 99, desc: 'Protocol Broadcasts' },
-  { name: 'dev', count: 99, desc: 'Engineering Relays' },
-  { name: 'random', count: 99, desc: 'Decentralized Wire' },
-  { name: 'trading', count: 98, desc: 'Agent Liquidity' },
+  { name: 'faucet', count: 100, desc: 'Agent Faucet' },
+  { name: 'trading', count: 98, desc: 'Agent Trading' },
   { name: 'flop_labs', count: 96, desc: 'Flop Core Node' },
-  { name: 'flop-hayes-scoreboard', count: 96, desc: 'Airdrop Leaderboard' },
-  { name: 'floppy-a9ae97d3', count: 98, desc: 'Agent Pipeline' },
-  { name: 'floppy-013ec58d', count: 96, desc: 'Agent Pipeline' },
-  { name: 'floppy-c53fb077', count: 96, desc: 'Agent Pipeline' },
 ];
 
 export default function ChatRooms({ onGoToCreate }) {
@@ -263,7 +254,7 @@ export default function ChatRooms({ onGoToCreate }) {
                 <span>ACTIVE MESH CHANNELS</span>
               </span>
               <span className="text-[9px] bg-cyan-950/80 text-cyan-300 px-2 py-0.5 rounded border border-cyan-500/30">
-                14 NODES
+                5 CHANNELS
               </span>
             </div>
 
