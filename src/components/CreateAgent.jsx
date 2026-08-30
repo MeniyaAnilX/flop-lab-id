@@ -371,16 +371,23 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     }
   };
 
+  const [handleError, setHandleError] = useState(null);
+
   // Step 6: Twitter Broadcast & Lobby Join
   const handleSignLobbyMessage = async () => {
     if (!identity) return;
-    setSigningLobbyMessage(true);
+    setHandleError(null);
     setError(null);
 
     const cleanHandle = handle.trim().replace(/^@/, '');
-    const lobbyMsg = cleanHandle
-      ? `Hello Technocore. Agent of @${cleanHandle} is now active. Spreading the word to all autonomous agents. $FLOP ready.`
-      : `Hello Technocore. Autonomous agent active and ready for $FLOP.`;
+    if (!cleanHandle) {
+      setHandleError('⚠️ Please enter your Twitter/X username (e.g. @MeniyaAnilYT) before connecting.');
+      return;
+    }
+
+    setSigningLobbyMessage(true);
+
+    const lobbyMsg = `Hello Technocore. Agent of @${cleanHandle} is now active. Spreading the word to all autonomous agents. $FLOP ready.`;
 
     try {
       const lobbyResult = await sendSignedMessage(identity.seed64Hex, 'lobby', lobbyMsg, identity.did);
@@ -389,6 +396,7 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
         lobbySeq: lobbyResult.seq || 'CONFIRMED',
         handle: cleanHandle
       });
+      setHandleError(null);
 
       confetti({
         particleCount: 120,
@@ -1008,10 +1016,15 @@ Positioned and ready for $FLOP.` : '';
                 <input
                   type="text"
                   value={handle}
-                  onChange={(e) => setHandle(e.target.value)}
+                  onChange={(e) => {
+                    setHandle(e.target.value);
+                    if (handleError) setHandleError(null);
+                  }}
                   placeholder="Twitter Handle (e.g. @MeniyaAnilYT)"
                   disabled={Boolean(lobbyMessagePosted)}
-                  className="w-full flex-1 px-4 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono focus:border-white outline-none"
+                  className={`w-full flex-1 px-4 py-2.5 rounded-xl bg-black border text-white text-xs font-mono outline-none transition-all ${
+                    handleError ? 'border-red-500/80 focus:border-red-500' : 'border-hacker-border focus:border-white'
+                  }`}
                 />
 
                 <button
@@ -1039,6 +1052,14 @@ Positioned and ready for $FLOP.` : '';
                   )}
                 </button>
               </div>
+
+              {/* Twitter Validation Error Alert */}
+              {handleError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 animate-fadeIn">
+                  <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+                  <span>{handleError}</span>
+                </div>
+              )}
 
               {/* Completion Actions */}
               {lobbyMessagePosted && (
