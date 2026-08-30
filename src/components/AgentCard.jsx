@@ -43,8 +43,16 @@ export default function AgentCard({ initialIdentity }) {
     } catch { return ''; }
   });
 
-  const [statusData, setStatusData] = useState(null);
-  const [noteContent, setNoteContent] = useState('');
+  const [noteContent, setNoteContent] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.notePublishedData?.text || parsed.noteText || '';
+      }
+      return '';
+    } catch { return ''; }
+  });
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -242,6 +250,11 @@ export default function AgentCard({ initialIdentity }) {
                   <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-hacker-green/10 border border-hacker-green/40 text-hacker-green text-[11px] font-bold">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>VERIFIED AGENT</span>
+                  </div>
+                ) : loading ? (
+                  <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/10 border border-white/20 text-white text-[11px] font-bold">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
+                    <span>VERIFYING ON-CHAIN...</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-400/10 border border-amber-400/40 text-amber-300 text-[11px] font-bold">
