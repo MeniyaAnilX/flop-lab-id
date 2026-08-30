@@ -15,10 +15,23 @@ import {
   Search
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { Lottie } from 'lottie-react';
+import { useLottie } from 'lottie-react';
 import robotAnimation from '../assets/robot.json';
 import { parseDid, getAgentVisuals } from '../lib/crypto';
 import { verifyDidStatus, readKvNote, TECHNOCORE_BASE_URL } from '../lib/technocore';
+
+function RobotAvatar() {
+  const options = {
+    animationData: robotAnimation,
+    loop: true,
+    autoplay: true,
+  };
+  const { View } = useLottie(options, {
+    width: '100%',
+    height: '100%',
+  });
+  return View;
+}
 
 const STORAGE_KEY = 'flop_agent_state_v6';
 
@@ -236,21 +249,11 @@ export default function AgentCard({ initialIdentity }) {
 
               {/* Card Body */}
               <div className="grid grid-cols-3 gap-4 mb-6 relative z-10">
-                {/* Animated Robot Avatar */}
-                <div className="col-span-1 flex flex-col items-center justify-center p-3 rounded-2xl bg-hacker-card border border-hacker-border relative overflow-hidden group">
-                  <div className="w-24 h-24 rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-white/20 mb-2 shadow-inner relative p-1">
-                    <Lottie 
-                      animationData={robotAnimation} 
-                      loop={true} 
-                      autoplay={true}
-                      className="w-full h-full object-contain"
-                    />
-                    <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-hacker-green animate-ping"></div>
-                    <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-hacker-green"></div>
+                {/* Animated Robot Avatar Box */}
+                <div className="col-span-1 flex items-center justify-center p-2 rounded-2xl bg-hacker-card border border-hacker-border overflow-hidden">
+                  <div className="w-full h-full min-h-[110px] rounded-xl overflow-hidden bg-black flex items-center justify-center border border-white/10 p-1">
+                    <RobotAvatar />
                   </div>
-                  <span className="text-[9px] text-hacker-muted uppercase tracking-wider font-bold">
-                    AUTONOMOUS AVATAR
-                  </span>
                 </div>
 
                 {/* Info Column */}
