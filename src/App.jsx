@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import CreateAgent from './components/CreateAgent';
 import AgentCard from './components/AgentCard';
@@ -6,9 +6,18 @@ import VerifyAgent from './components/VerifyAgent';
 import RoomExplorer from './components/RoomExplorer';
 import { Terminal, ExternalLink } from 'lucide-react';
 
+const STORAGE_KEY = 'flop_agent_state_v1';
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('create');
-  const [currentIdentity, setCurrentIdentity] = useState(null);
+  const [currentIdentity, setCurrentIdentity] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).identity : null;
+    } catch {
+      return null;
+    }
+  });
 
   const handleAgentCreated = (identity) => {
     setCurrentIdentity(identity);

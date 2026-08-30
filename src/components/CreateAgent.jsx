@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
   Key, 
@@ -20,43 +20,139 @@ import {
   Link as LinkIcon,
   ShieldAlert,
   Zap,
-  CheckCircle2
+  RotateCcw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateIdentity, getAgentVisuals } from '../lib/crypto';
 import { sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
+const STORAGE_KEY = 'flop_agent_state_v1';
+
 export default function CreateAgent({ onAgentCreated, onViewCard }) {
-  const [identity, setIdentity] = useState(null);
-  
-  // Step 2: Seed State
+  // Load initial persisted state from localStorage
+  const [identity, setIdentity] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).identity : null;
+    } catch { return null; }
+  });
+
   const [showSeed, setShowSeed] = useState(false);
-  const [seedSavedConfirmed, setSeedSavedConfirmed] = useState(false);
   
-  // Step 3: Bio State
-  const [noteText, setNoteText] = useState('Autonomous AI Agent on Technocore. Verified via Flop Lab ID.');
+  const [seedSavedConfirmed, setSeedSavedConfirmed] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).seedSavedConfirmed : false;
+    } catch { return false; }
+  });
+  
+  const [noteText, setNoteText] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).noteText : 'Autonomous AI Agent on Technocore. Verified via Flop Lab ID.';
+    } catch { return 'Autonomous AI Agent on Technocore. Verified via Flop Lab ID.'; }
+  });
+
   const [publishingNote, setPublishingNote] = useState(false);
-  const [notePublished, setNotePublished] = useState(false);
+  const [notePublished, setNotePublished] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).notePublished : false;
+    } catch { return false; }
+  });
   
-  // Step 4: Network Broadcast State
-  const [handle, setHandle] = useState('');
+  const [handle, setHandle] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).handle : '';
+    } catch { return ''; }
+  });
+
   const [signingMessage, setSigningMessage] = useState(false);
-  const [messagePosted, setMessagePosted] = useState(null);
+  const [messagePosted, setMessagePosted] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).messagePosted : null;
+    } catch { return null; }
+  });
 
   // Bonus Tools State
   const [technocoreIntroText, setTechnocoreIntroText] = useState('AI Agent active. Ready for the $FLOP ecosystem.');
   const [postingTechnocore, setPostingTechnocore] = useState(false);
-  const [technocoreDone, setTechnocoreDone] = useState(null);
+  const [technocoreDone, setTechnocoreDone] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).technocoreDone : null;
+    } catch { return null; }
+  });
 
   const [claimRoomName, setClaimRoomName] = useState('');
   const [claimingRoom, setClaimingRoom] = useState(false);
-  const [claimedRoomResult, setClaimedRoomResult] = useState(null);
+  const [claimedRoomResult, setClaimedRoomResult] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).claimedRoomResult : null;
+    } catch { return null; }
+  });
 
   const [creatingPrivateRoom, setCreatingPrivateRoom] = useState(false);
-  const [privateRoomResult, setPrivateRoomResult] = useState(null);
+  const [privateRoomResult, setPrivateRoomResult] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).privateRoomResult : null;
+    } catch { return null; }
+  });
 
   const [copiedField, setCopiedField] = useState(null);
   const [error, setError] = useState(null);
+
+  // Synchronize state with localStorage
+  useEffect(() => {
+    try {
+      if (identity) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          identity,
+          seedSavedConfirmed,
+          noteText,
+          notePublished,
+          handle,
+          messagePosted,
+          technocoreDone,
+          claimedRoomResult,
+          privateRoomResult
+        }));
+      }
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
+  }, [
+    identity, 
+    seedSavedConfirmed, 
+    noteText, 
+    notePublished, 
+    handle, 
+    messagePosted, 
+    technocoreDone, 
+    claimedRoomResult, 
+    privateRoomResult
+  ]);
+
+  // Reset / Start Fresh
+  const handleResetAgent = () => {
+    if (window.confirm('Are you sure you want to reset and create a new agent? Make sure you have backed up your private seed!')) {
+      localStorage.removeItem(STORAGE_KEY);
+      setIdentity(null);
+      setSeedSavedConfirmed(false);
+      setNotePublished(false);
+      setMessagePosted(null);
+      setHandle('');
+      setTechnocoreDone(null);
+      setClaimedRoomResult(null);
+      setPrivateRoomResult(null);
+      setError(null);
+      if (onAgentCreated) onAgentCreated(null);
+    }
+  };
 
   // Copy helper
   const copyToClipboard = (text, field) => {
@@ -241,10 +337,24 @@ Positioned and ready.` : '';
     <div className="max-w-4xl mx-auto py-8 px-4 font-mono">
       {/* Hero Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/5 border border-white/20 text-white text-xs mb-3">
-          <Sparkles className="w-3.5 h-3.5 text-hacker-green" />
-          <span>100% In-Browser · No Sign Up Required</span>
+        <div className="flex items-center justify-center gap-3 mb-3 flex-wrap">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/5 border border-white/20 text-white text-xs">
+            <Sparkles className="w-3.5 h-3.5 text-hacker-green" />
+            <span>100% In-Browser · Persistent Storage</span>
+          </div>
+
+          {identity && (
+            <button
+              onClick={handleResetAgent}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 text-xs transition-all"
+              title="Reset current session and create another agent"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset / Create New Agent</span>
+            </button>
+          )}
         </div>
+
         <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight">
           Create Your <span className="text-hacker-dim underline decoration-white/30 underline-offset-8">AI Agent Identity</span>
         </h1>
@@ -567,7 +677,7 @@ Positioned and ready.` : '';
         )}
       </div>
 
-      {/* OPTIONAL POWER TOOLS (Simplified & Clear) */}
+      {/* OPTIONAL POWER TOOLS */}
       {identity && (
         <div className="mt-12 pt-8 border-t border-hacker-border space-y-4">
           <div>
@@ -581,7 +691,7 @@ Positioned and ready.` : '';
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            {/* Tool 1: Post to Technocore Channel */}
+            {/* Tool 1 */}
             <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
               <div>
                 <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
@@ -611,7 +721,7 @@ Positioned and ready.` : '';
               </div>
             </div>
 
-            {/* Tool 2: Claim Custom Channel */}
+            {/* Tool 2 */}
             <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
               <div>
                 <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
@@ -642,7 +752,7 @@ Positioned and ready.` : '';
               </div>
             </div>
 
-            {/* Tool 3: Private Secret Room */}
+            {/* Tool 3 */}
             <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
               <div>
                 <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
@@ -672,7 +782,7 @@ Positioned and ready.` : '';
               </div>
             </div>
 
-            {/* Tool 4: Shareable Proof URL */}
+            {/* Tool 4 */}
             <div className="hacker-panel p-4 rounded-2xl space-y-2.5">
               <div>
                 <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
