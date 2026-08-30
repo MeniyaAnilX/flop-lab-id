@@ -967,8 +967,18 @@ Positioned and ready for $FLOP.` : '';
                     </button>
                   </>
                 ) : (
-                  <div className="p-3 rounded-xl bg-hacker-green/10 border border-hacker-green/40 text-hacker-green text-xs w-full">
-                    ✓ Contribution recorded on Technocore ledger: <b>{contribDone.url || 'Skipped'}</b>
+                  <div className="p-3.5 rounded-xl bg-hacker-green/10 border border-hacker-green/40 text-hacker-green text-xs w-full space-y-1">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="font-bold">✓ Contribution Cryptographically Signed & Recorded:</span>
+                      {contribDone.seq && contribDone.seq !== 'RECORDED' && (
+                        <span className="bg-hacker-green/20 border border-hacker-green/40 px-2 py-0.5 rounded text-[11px] font-bold">
+                          Ledger Seq #{contribDone.seq}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-white/90 font-mono break-all">
+                      {contribDone.url || 'Skipped'}
+                    </p>
                   </div>
                 )}
               </div>
