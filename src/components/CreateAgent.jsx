@@ -315,35 +315,57 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     }
   };
 
+  const [contribError, setContribError] = useState(null);
+
   // Step 5: Record Public Contribution (CryptoTelugu Style)
   const handleRecordContribution = async () => {
     if (!identity) return;
-    const cleanUrl = contribUrl.trim();
-    if (!cleanUrl) {
-      setError('Please provide your public contribution URL (e.g. Tweet, YouTube, Article)');
-      return;
-    }
-    setRecordingContrib(true);
+    setContribError(null);
     setError(null);
 
-    const topic = contribTopic.trim() || 'Technocore and AI Agent decentralization';
-    const payloadText = `I published a ${contribType}: ${cleanUrl} — it helps people learn about ${topic}. My Technocore DID is ${identity.did}.`;
+    const cleanTopic = contribTopic.trim();
+    const cleanUrl = contribUrl.trim();
+
+    if (!cleanTopic) {
+      setContribError('⚠️ Please enter what you made (Topic) e.g. "Technocore AI Agent Tutorial"');
+      return;
+    }
+
+    if (!cleanUrl) {
+      setContribError('⚠️ Please enter your Public Contribution URL (e.g. https://x.com/... or https://youtube.com/...)');
+      return;
+    }
+
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      setContribError('⚠️ Public Contribution URL must be a valid link starting with https:// or http://');
+      return;
+    }
+
+    if (!checkMentionFlop || !checkPublicOwner) {
+      setContribError('⚠️ Please check both confirmation boxes to proceed.');
+      return;
+    }
+
+    setRecordingContrib(true);
+    const payloadText = `I published a ${contribType}: ${cleanUrl} — it helps people learn about ${cleanTopic}. My Technocore DID is ${identity.did}.`;
 
     try {
       const res = await sendSignedMessage(identity.seed64Hex, 'technocore', payloadText, identity.did);
       setContribDone({
         type: contribType,
         url: cleanUrl,
-        topic,
+        topic: cleanTopic,
         seq: res.seq || 'RECORDED'
       });
+      setContribError(null);
     } catch (err) {
       setContribDone({
         type: contribType,
         url: cleanUrl,
-        topic,
+        topic: cleanTopic,
         seq: 'RECORDED'
       });
+      setContribError(null);
     } finally {
       setRecordingContrib(false);
     }
@@ -856,10 +878,15 @@ Positioned and ready for $FLOP.` : '';
                 <input
                   type="text"
                   value={contribTopic}
-                  onChange={(e) => setContribTopic(e.target.value)}
+                  onChange={(e) => {
+                    setContribTopic(e.target.value);
+                    if (contribError) setContribError(null);
+                  }}
                   disabled={Boolean(contribDone)}
                   placeholder="e.g. Technocore AI Agent Onboarding Tutorial"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                  className={`w-full px-3.5 py-2.5 rounded-xl bg-black border text-white text-xs font-mono outline-none transition-all ${
+                    contribError && !contribTopic.trim() ? 'border-red-500/80 focus:border-red-500' : 'border-hacker-border focus:border-white'
+                  }`}
                 />
               </div>
 
@@ -868,10 +895,15 @@ Positioned and ready for $FLOP.` : '';
                 <input
                   type="url"
                   value={contribUrl}
-                  onChange={(e) => setContribUrl(e.target.value)}
+                  onChange={(e) => {
+                    setContribUrl(e.target.value);
+                    if (contribError) setContribError(null);
+                  }}
                   disabled={Boolean(contribDone)}
                   placeholder="https://x.com/... or https://youtube.com/..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                  className={`w-full px-3.5 py-2.5 rounded-xl bg-black border text-white text-xs font-mono outline-none transition-all ${
+                    contribError && !contribUrl.trim() ? 'border-red-500/80 focus:border-red-500' : 'border-hacker-border focus:border-white'
+                  }`}
                 />
               </div>
 
@@ -882,7 +914,10 @@ Positioned and ready for $FLOP.` : '';
                     <input
                       type="checkbox"
                       checked={checkMentionFlop}
-                      onChange={(e) => setCheckMentionFlop(e.target.checked)}
+                      onChange={(e) => {
+                        setCheckMentionFlop(e.target.checked);
+                        if (contribError) setContribError(null);
+                      }}
                       className="accent-white"
                     />
                     <span>It mentions @flop_labs and includes my DID where appropriate.</span>
@@ -892,11 +927,22 @@ Positioned and ready for $FLOP.` : '';
                     <input
                       type="checkbox"
                       checked={checkPublicOwner}
-                      onChange={(e) => setCheckPublicOwner(e.target.checked)}
+                      onChange={(e) => {
+                        setCheckPublicOwner(e.target.checked);
+                        if (contribError) setContribError(null);
+                      }}
                       className="accent-white"
                     />
                     <span>It is public and verified by my agent key.</span>
                   </label>
+                </div>
+              )}
+
+              {/* Validation Warning Alert */}
+              {contribError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 animate-fadeIn">
+                  <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+                  <span>{contribError}</span>
                 </div>
               )}
 
@@ -906,7 +952,7 @@ Positioned and ready for $FLOP.` : '';
                   <>
                     <button
                       onClick={handleRecordContribution}
-                      disabled={recordingContrib || !contribUrl.trim()}
+                      disabled={recordingContrib}
                       className="btn-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md"
                     >
                       {recordingContrib ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}

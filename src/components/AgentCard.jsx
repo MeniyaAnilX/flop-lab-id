@@ -4,23 +4,20 @@ import {
   Download, 
   Share2, 
   ShieldCheck, 
+  ShieldAlert,
   Terminal, 
   Copy, 
   Check, 
   ExternalLink,
   RefreshCw,
   AlertCircle,
-  Sparkles,
-  FileText,
-  Lock,
-  Layers,
-  Award
+  Clock
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { parseDid, getAgentVisuals } from '../lib/crypto';
 import { verifyDidStatus, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
-const STORAGE_KEY = 'flop_agent_state_v4';
+const STORAGE_KEY = 'flop_agent_state_v5';
 
 export default function AgentCard({ initialIdentity }) {
   const [didInput, setDidInput] = useState(() => {
@@ -35,7 +32,14 @@ export default function AgentCard({ initialIdentity }) {
     if (initialIdentity?.did) return initialIdentity.did;
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).identity?.did || '' : '';
+      const id = saved ? JSON.parse(saved).identity?.did : '';
+      if (id) {
+        try {
+          parseDid(id);
+          return id;
+        } catch { return ''; }
+      }
+      return '';
     } catch { return ''; }
   });
 
@@ -50,50 +54,80 @@ export default function AgentCard({ initialIdentity }) {
 
   useEffect(() => {
     if (initialIdentity?.did) {
-      setCurrentDid(initialIdentity.did);
-      setDidInput(initialIdentity.did);
-      loadAgentData(initialIdentity.did);
+      try {
+        parseDid(initialIdentity.did);
+        setCurrentDid(initialIdentity.did);
+        setDidInput(initialIdentity.did);
+        setError(null);
+        loadAgentData(initialIdentity.did);
+      } catch {
+        setError('Invalid initial DID format');
+        setCurrentDid('');
+      }
     } else if (currentDid) {
       loadAgentData(currentDid);
     }
   }, [initialIdentity]);
 
-  // Fetch Agent Note & Status
+  // Real-Time Agent Data Fetch & Verification
   const loadAgentData = async (didToQuery) => {
     if (!didToQuery) return;
     setLoading(true);
     setError(null);
+    setNoteContent('');
+    setStatusData(null);
+
     try {
+      // 1. Strict Cryptographic Verification of the DID
       const parsed = parseDid(didToQuery);
       
-      // 1. Fetch KV Note if exists
+      let fetchedNote = '';
+      // 2. Fetch real KV Note from Technocore Store
       try {
         const kvRes = await fetch(`${TECHNOCORE_BASE_URL}/kv/did/${parsed.fingerprint}?t=${Date.now()}`);
         if (kvRes.ok) {
           const text = await kvRes.text();
-          if (text && !text.includes('not found') && !text.includes('404')) {
-            setNoteContent(text.replace(/^["']|["']$/g, '').trim());
+          if (text && !text.includes('not found') && !text.includes('404') && !text.includes('Error')) {
+            fetchedNote = text.replace(/^["']|["']$/g, '').trim();
+            setNoteContent(fetchedNote);
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('KV note fetch failed:', e);
+      }
 
-      // 2. Fetch room status
+      // 3. Query Technocore room verification
       const res = await verifyDidStatus(didToQuery);
       setStatusData(res);
     } catch (err) {
-      setError(err.message || 'Invalid DID string');
+      setError(err.message || 'Invalid DID string. Must start with did:key:z6Mk...');
+      setCurrentDid(''); // DO NOT RENDER CARD FOR INVALID DID!
     } finally {
       setLoading(false);
     }
   };
 
-  // Submit DID Query
+  // Submit DID Query with Strict Validation
   const handleQuery = (e) => {
     e.preventDefault();
-    if (!didInput.trim()) return;
     const clean = didInput.trim();
-    setCurrentDid(clean);
-    loadAgentData(clean);
+    if (!clean) {
+      setError('Please enter a public DID (e.g. did:key:z6Mk...)');
+      setCurrentDid('');
+      return;
+    }
+
+    try {
+      parseDid(clean); // Throws if invalid prefix, length, or Base58 encoding
+      setError(null);
+      setCurrentDid(clean);
+      loadAgentData(clean);
+    } catch (err) {
+      setError('Invalid DID format! A valid agent DID must start with "did:key:z6Mk" and be 48 characters.');
+      setCurrentDid(''); // CLEAR CARD ON INVALID INPUT
+      setStatusData(null);
+      setNoteContent('');
+    }
   };
 
   // Download Card as PNG Image
@@ -126,7 +160,8 @@ export default function AgentCard({ initialIdentity }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const visuals = currentDid ? getAgentVisuals(currentDid) : null;
+  // Actual Network Recording Status
+  const isRecordedOnLedger = Boolean(noteContent || statusData?.lobbyVerified || statusData?.technocoreVerified);
   const qrUrl = currentDid 
     ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(currentDid)}&color=FFFFFF&bgcolor=000000`
     : '';
@@ -154,9 +189,14 @@ export default function AgentCard({ initialIdentity }) {
             <input
               type="text"
               value={didInput}
-              onChange={(e) => setDidInput(e.target.value)}
+              onChange={(e) => {
+                setDidInput(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder="Paste public DID (did:key:z6Mk...)"
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono focus:border-white outline-none"
+              className={`w-full pl-10 pr-4 py-3 rounded-xl bg-black border text-white text-xs font-mono outline-none transition-all ${
+                error ? 'border-red-500/70 focus:border-red-500' : 'border-hacker-border focus:border-white'
+              }`}
             />
             <Terminal className="w-4 h-4 text-hacker-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
           </div>
@@ -172,22 +212,22 @@ export default function AgentCard({ initialIdentity }) {
         </form>
 
         {error && (
-          <p className="text-red-400 text-xs mt-3 flex items-center gap-1.5">
-            <AlertCircle className="w-3.5 h-3.5" />
+          <div className="mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 animate-fadeIn">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
-          </p>
+          </div>
         )}
       </div>
 
-      {/* Holographic Hacker Credential Card */}
-      {currentDid ? (
+      {/* Holographic Hacker Credential Card - ONLY RENDER IF DID IS VALID */}
+      {currentDid && !error ? (
         <div className="space-y-6 animate-fadeIn">
           <div className="flex justify-center p-2">
             <div
               ref={cardRef}
               className="relative w-full max-w-[640px] rounded-3xl p-6 md:p-8 overflow-hidden bg-black border-2 border-white shadow-[0_0_50px_rgba(255,255,255,0.18)]"
             >
-              {/* Subtle Watermark */}
+              {/* Watermark */}
               <div className="absolute right-4 bottom-4 opacity-5 font-mono text-8xl font-black text-white pointer-events-none select-none">
                 FLOP
               </div>
@@ -206,15 +246,23 @@ export default function AgentCard({ initialIdentity }) {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/10 border border-white/30 text-white text-[11px] font-bold">
-                  <ShieldCheck className="w-3.5 h-3.5 text-hacker-green" />
-                  <span>VERIFIED AGENT</span>
-                </div>
+                {/* Real-time Status Badge */}
+                {isRecordedOnLedger ? (
+                  <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-hacker-green/10 border border-hacker-green/40 text-hacker-green text-[11px] font-bold">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>VERIFIED AGENT</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-400/10 border border-amber-400/40 text-amber-300 text-[11px] font-bold">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>PENDING ON-CHAIN RECORD</span>
+                  </div>
+                )}
               </div>
 
               {/* Card Body */}
               <div className="grid grid-cols-3 gap-4 mb-6 relative z-10">
-                {/* QR Code & Avatar */}
+                {/* QR Code */}
                 <div className="col-span-1 flex flex-col items-center justify-center p-3 rounded-2xl bg-hacker-card border border-hacker-border">
                   {qrUrl && (
                     <div className="w-24 h-24 rounded-lg overflow-hidden bg-black p-1 border border-white/20 mb-2">
@@ -233,22 +281,26 @@ export default function AgentCard({ initialIdentity }) {
                     </p>
                   </div>
 
-                  {/* Profile Note if available */}
+                  {/* Profile Note */}
                   <div className="bg-hacker-card p-2.5 rounded-xl border border-hacker-border">
                     <span className="text-[9px] text-hacker-muted block uppercase">// PROFILE NOTE</span>
                     <p className="text-[11px] text-white/90 font-medium italic">
-                      "{noteContent || 'Building on Technocore. Say hello in the lobby.'}"
+                      "{noteContent || (isRecordedOnLedger ? 'Active agent on Technocore.' : 'No profile note registered yet on Technocore.')}"
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-hacker-card p-2 rounded-xl border border-hacker-border">
                       <span className="text-[9px] text-hacker-muted block">// LEDGER PROOF</span>
-                      <span className="text-xs font-bold text-hacker-green">RECORDED</span>
+                      <span className={`text-xs font-bold ${isRecordedOnLedger ? 'text-hacker-green' : 'text-amber-300'}`}>
+                        {isRecordedOnLedger ? 'RECORDED' : 'UNRECORDED'}
+                      </span>
                     </div>
                     <div className="bg-hacker-card p-2 rounded-xl border border-hacker-border">
                       <span className="text-[9px] text-hacker-muted block">// $FLOP AIRDROP</span>
-                      <span className="text-xs font-bold text-white">100% READY</span>
+                      <span className={`text-xs font-bold ${isRecordedOnLedger ? 'text-white' : 'text-amber-300'}`}>
+                        {isRecordedOnLedger ? '100% READY' : 'STEP 3 & 4 NEEDED'}
+                      </span>
                     </div>
                   </div>
                 </div>
