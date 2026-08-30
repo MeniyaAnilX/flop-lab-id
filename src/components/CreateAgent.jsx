@@ -1595,24 +1595,36 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <input
                     type="text"
                     value={claimRoomName}
                     onChange={(e) => setClaimRoomName(e.target.value)}
                     placeholder="e.g. my-room"
                     disabled={Boolean(claimRoomDone)}
-                    className="px-3.5 py-2 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                    className="px-3.5 py-2 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white disabled:opacity-60"
                   />
                   <button
                     onClick={handleClaimRoom}
-                    disabled={claimingRoom || !claimRoomName.trim()}
-                    className={`px-5 py-2 rounded-xl text-xs font-bold ${
-                      claimRoomDone ? 'btn-outline text-hacker-green border-hacker-green/40' : 'btn-white'
+                    disabled={claimingRoom || !claimRoomName.trim() || Boolean(claimRoomDone)}
+                    className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
+                      claimRoomDone ? 'btn-outline text-hacker-green border-hacker-green/40 cursor-default' : 'btn-white cursor-pointer'
                     }`}
                   >
                     {claimingRoom ? 'Claiming...' : claimRoomDone ? `✓ Claimed (/r/${claimRoomDone.room})` : 'Claim'}
                   </button>
+
+                  {claimRoomDone && (
+                    <button
+                      onClick={() => {
+                        setClaimRoomDone(null);
+                        setClaimRoomName('');
+                      }}
+                      className="text-xs text-hacker-muted hover:text-white underline underline-offset-4 ml-1 cursor-pointer"
+                    >
+                      Claim another
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
