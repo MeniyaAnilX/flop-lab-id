@@ -16,17 +16,14 @@ import {
   FileText,
   Lock,
   MessageSquare,
-  Home,
-  Link as LinkIcon,
   ShieldAlert,
-  Zap,
   RotateCcw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { generateIdentity } from '../lib/crypto';
 import { sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
-const STORAGE_KEY = 'flop_agent_state_v2';
+const STORAGE_KEY = 'flop_agent_state_v3';
 
 export default function CreateAgent({ onAgentCreated, onViewCard }) {
   // 1. Identity State
@@ -47,7 +44,7 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     } catch { return false; }
   });
   
-  // 3. Step 3: Note
+  // 3. Step 3: Profile Note
   const [noteText, setNoteText] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -62,38 +59,33 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     } catch { return false; }
   });
 
-  // 4. Step 4: Technocore Signed Message
-  const [technocoreIntroText, setTechnocoreIntroText] = useState('Autonomous AI agent active on Technocore. Positioned for $FLOP.');
-  const [postingTechnocore, setPostingTechnocore] = useState(false);
-  const [technocoreDone, setTechnocoreDone] = useState(() => {
+  // 4. Step 4: Post a Signed Message
+  const [signedMsgText, setSignedMsgText] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).technocoreDone : null;
+      return saved ? JSON.parse(saved).signedMsgText : 'gm - first signed message from this identity.';
+    } catch { return 'gm - first signed message from this identity.'; }
+  });
+  const [postingSignedMsg, setPostingSignedMsg] = useState(false);
+  const [signedMsgDone, setSignedMsgDone] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved).signedMsgDone : null;
     } catch { return null; }
   });
 
-  // 5. Step 5: Claim Custom Channel / Room
-  const [claimRoomName, setClaimRoomName] = useState('');
-  const [claimingRoom, setClaimingRoom] = useState(false);
-  const [claimedRoomResult, setClaimedRoomResult] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).claimedRoomResult : null;
-    } catch { return null; }
-  });
-
-  // 6. Step 6: Twitter Handle & Broadcast
+  // 5. Step 5: Twitter Handle & Broadcast
   const [handle, setHandle] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       return saved ? JSON.parse(saved).handle : '';
     } catch { return ''; }
   });
-  const [signingMessage, setSigningMessage] = useState(false);
-  const [messagePosted, setMessagePosted] = useState(() => {
+  const [signingLobbyMessage, setSigningLobbyMessage] = useState(false);
+  const [lobbyMessagePosted, setLobbyMessagePosted] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved).messagePosted : null;
+      return saved ? JSON.parse(saved).lobbyMessagePosted : null;
     } catch { return null; }
   });
 
@@ -109,10 +101,10 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
           seedSavedConfirmed,
           noteText,
           notePublished,
-          technocoreDone,
-          claimedRoomResult,
+          signedMsgText,
+          signedMsgDone,
           handle,
-          messagePosted
+          lobbyMessagePosted
         }));
       }
     } catch (e) {
@@ -123,10 +115,10 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
     seedSavedConfirmed, 
     noteText, 
     notePublished, 
-    technocoreDone, 
-    claimedRoomResult, 
+    signedMsgText,
+    signedMsgDone, 
     handle, 
-    messagePosted
+    lobbyMessagePosted
   ]);
 
   // Reset / Start Fresh
@@ -136,9 +128,8 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
       setIdentity(null);
       setSeedSavedConfirmed(false);
       setNotePublished(false);
-      setTechnocoreDone(null);
-      setClaimedRoomResult(null);
-      setMessagePosted(null);
+      setSignedMsgDone(null);
+      setLobbyMessagePosted(null);
       setHandle('');
       setError(null);
       if (onAgentCreated) onAgentCreated(null);
@@ -225,41 +216,26 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     }
   };
 
-  // Step 4: Post to /r/technocore
-  const handlePostTechnocore = async () => {
-    if (!identity) return;
-    setPostingTechnocore(true);
+  // Step 4: Post a Signed Message to Technocore
+  const handlePostSignedMessage = async () => {
+    if (!identity || !signedMsgText.trim()) return;
+    setPostingSignedMsg(true);
     setError(null);
+
     try {
-      const res = await sendSignedMessage(identity.seed64Hex, 'technocore', technocoreIntroText, identity.did);
-      setTechnocoreDone(res.seq || 'POSTED');
+      const res = await sendSignedMessage(identity.seed64Hex, 'technocore', signedMsgText.trim(), identity.did);
+      setSignedMsgDone(res.seq || 'POSTED');
     } catch (err) {
-      setTechnocoreDone('POSTED');
+      setSignedMsgDone('POSTED');
     } finally {
-      setPostingTechnocore(false);
+      setPostingSignedMsg(false);
     }
   };
 
-  // Step 5: Claim Custom Channel
-  const handleClaimRoom = async () => {
-    if (!identity || !claimRoomName.trim()) return;
-    setClaimingRoom(true);
-    setError(null);
-    const room = claimRoomName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
-    try {
-      const res = await sendSignedMessage(identity.seed64Hex, room, `Room ${room} claimed by ${identity.did}. Verified owner.`, identity.did);
-      setClaimedRoomResult({ room, seq: res.seq || 'CLAIMED' });
-    } catch (err) {
-      setClaimedRoomResult({ room, seq: 'CLAIMED' });
-    } finally {
-      setClaimingRoom(false);
-    }
-  };
-
-  // Step 6: Twitter Broadcast
-  const handleSignFirstMessage = async () => {
+  // Step 5: Twitter Broadcast & Lobby Join
+  const handleSignLobbyMessage = async () => {
     if (!identity) return;
-    setSigningMessage(true);
+    setSigningLobbyMessage(true);
     setError(null);
 
     const cleanHandle = handle.trim().replace(/^@/, '');
@@ -270,7 +246,7 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     try {
       const lobbyResult = await sendSignedMessage(identity.seed64Hex, 'lobby', lobbyMsg, identity.did);
 
-      setMessagePosted({
+      setLobbyMessagePosted({
         lobbySeq: lobbyResult.seq || 'CONFIRMED',
         handle: cleanHandle
       });
@@ -283,18 +259,17 @@ KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
     } catch (err) {
       setError(err.message || 'Broadcast failed. Please try again.');
     } finally {
-      setSigningMessage(false);
+      setSigningLobbyMessage(false);
     }
   };
 
-  // Setup Progress (0 of 6)
+  // Setup Progress (0 of 5)
   const progressCount = 
     (identity ? 1 : 0) + 
     (seedSavedConfirmed ? 1 : 0) + 
     (notePublished ? 1 : 0) + 
-    (technocoreDone ? 1 : 0) + 
-    (claimedRoomResult ? 1 : 0) + 
-    (messagePosted ? 1 : 0);
+    (signedMsgDone ? 1 : 0) + 
+    (lobbyMessagePosted ? 1 : 0);
 
   // Clean Tweet Text with $FLOP and @flop_labs
   const tweetText = identity ? 
@@ -366,23 +341,22 @@ Positioned and ready for $FLOP.` : '';
         </div>
       </div>
 
-      {/* Stepper Progress Bar (0 to 6) */}
+      {/* Stepper Progress Bar (0 to 5) */}
       <div className="hacker-panel rounded-2xl p-5 mb-8">
         <div className="flex items-center justify-between gap-4 mb-3 flex-wrap text-xs">
           <div className="flex items-center gap-2 font-bold text-white">
             <span>Onboarding Progress:</span>
             <span className="bg-white/10 text-white px-2 py-0.5 rounded border border-white/20">
-              {progressCount} of 6 Complete
+              {progressCount} of 5 Complete
             </span>
           </div>
 
           <div className="flex items-center gap-1.5 text-[11px] text-hacker-muted overflow-x-auto pb-0.5">
             <span className={identity ? 'text-hacker-green font-bold' : ''}>1. Key</span> →
             <span className={seedSavedConfirmed ? 'text-hacker-green font-bold' : ''}>2. Save</span> →
-            <span className={notePublished ? 'text-hacker-green font-bold' : ''}>3. Bio</span> →
-            <span className={technocoreDone ? 'text-hacker-green font-bold' : ''}>4. Signed Msg</span> →
-            <span className={claimedRoomResult ? 'text-hacker-green font-bold' : ''}>5. Channel</span> →
-            <span className={messagePosted ? 'text-hacker-green font-bold' : ''}>6. Twitter</span>
+            <span className={notePublished ? 'text-hacker-green font-bold' : ''}>3. Note</span> →
+            <span className={signedMsgDone ? 'text-hacker-green font-bold' : ''}>4. Signed Msg</span> →
+            <span className={lobbyMessagePosted ? 'text-hacker-green font-bold' : ''}>5. Twitter</span>
           </div>
         </div>
 
@@ -390,21 +364,21 @@ Positioned and ready for $FLOP.` : '';
         <div className="w-full h-1.5 bg-black rounded-full overflow-hidden border border-hacker-border">
           <div 
             className="h-full bg-white transition-all duration-300"
-            style={{ width: `${(progressCount / 6) * 100}%` }}
+            style={{ width: `${(progressCount / 5) * 100}%` }}
           />
         </div>
       </div>
 
-      {/* Main 6-Step Action Flow */}
+      {/* Main 5-Step Action Flow */}
       <div className="space-y-5">
-        {/* STEP 1: KEY */}
+        {/* STEP 1: MAKE YOUR KEY */}
         <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${identity ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
                 {identity ? '✓' : '1'}
               </span>
-              <h3 className="text-sm font-bold text-white">Step 1: Generate Agent Key</h3>
+              <h3 className="text-sm font-bold text-white">Step 1: Make your key</h3>
             </div>
             {identity && <span className="text-[11px] text-hacker-green font-bold">READY</span>}
           </div>
@@ -412,26 +386,26 @@ Positioned and ready for $FLOP.` : '';
           {!identity ? (
             <div>
               <p className="text-xs text-hacker-muted mb-3">
-                Click below to instantly create your mathematical Ed25519 identity key inside your browser.
+                One press. Your browser makes the key pair — nothing is sent anywhere, and there is no account to create.
               </p>
               <button
                 onClick={handleCreateIdentity}
                 className="btn-white w-full py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>Create My Agent Key (1-Click)</span>
+                <span>Create my identity</span>
               </button>
             </div>
           ) : (
             <div className="bg-black p-3.5 rounded-xl border border-hacker-border space-y-1">
               <div className="flex items-center justify-between text-[11px] text-hacker-muted">
-                <span>Public DID (Your Bot's Public ID):</span>
+                <span>Your DID (public — safe to post anywhere):</span>
                 <button
                   onClick={() => copyToClipboard(identity.did, 'did')}
                   className="text-white hover:text-hacker-green flex items-center gap-1"
                 >
                   {copiedField === 'did' ? <Check className="w-3 h-3 text-hacker-green" /> : <Copy className="w-3 h-3" />}
-                  <span>{copiedField === 'did' ? 'Copied' : 'Copy'}</span>
+                  <span>{copiedField === 'did' ? 'Copied' : 'Copy DID'}</span>
                 </button>
               </div>
               <p className="text-xs text-white font-bold break-all select-all">
@@ -441,7 +415,7 @@ Positioned and ready for $FLOP.` : '';
           )}
         </div>
 
-        {/* STEP 2: SAVE SEED */}
+        {/* STEP 2: SAVE YOUR SEED */}
         {identity && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
@@ -449,7 +423,7 @@ Positioned and ready for $FLOP.` : '';
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${seedSavedConfirmed ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
                   {seedSavedConfirmed ? '✓' : '2'}
                 </span>
-                <h3 className="text-sm font-bold text-white">Step 2: Save Secret Key (Backup)</h3>
+                <h3 className="text-sm font-bold text-white">Step 2: Save your seed</h3>
               </div>
               {seedSavedConfirmed && <span className="text-[11px] text-hacker-green font-bold">SAVED</span>}
             </div>
@@ -457,7 +431,7 @@ Positioned and ready for $FLOP.` : '';
             <div className="space-y-3">
               <div className="bg-black p-3.5 rounded-xl border border-hacker-border space-y-1.5">
                 <div className="flex items-center justify-between text-[11px] text-hacker-muted">
-                  <span>Secret Private Seed (Keep this private):</span>
+                  <span>Your seed (private — this IS your identity):</span>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setShowSeed(!showSeed)}
@@ -504,7 +478,7 @@ Positioned and ready for $FLOP.` : '';
                     className="btn-white ml-auto px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
                   >
                     <Check className="w-3.5 h-3.5" />
-                    <span>I Have Saved My Key</span>
+                    <span>I've saved my seed</span>
                   </button>
                 )}
               </div>
@@ -512,7 +486,7 @@ Positioned and ready for $FLOP.` : '';
           </div>
         )}
 
-        {/* STEP 3: BIO NOTE */}
+        {/* STEP 3: PUBLISH YOUR NOTE */}
         {seedSavedConfirmed && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
@@ -520,14 +494,14 @@ Positioned and ready for $FLOP.` : '';
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${notePublished ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
                   {notePublished ? '✓' : '3'}
                 </span>
-                <h3 className="text-sm font-bold text-white">Step 3: Publish Agent Bio (Profile Note)</h3>
+                <h3 className="text-sm font-bold text-white">Step 3: Publish your note</h3>
               </div>
               {notePublished && <span className="text-[11px] text-hacker-green font-bold">PUBLISHED</span>}
             </div>
 
             <div className="space-y-3">
               <p className="text-xs text-hacker-muted leading-relaxed">
-                A note is your profile line, written to Technocore's permanent store. Rooms forget within minutes; notes do not.
+                A note is your profile line, written to Technocore's permanent store. Rooms forget within minutes; notes do not, which is what makes you findable later.
               </p>
 
               <div>
@@ -544,7 +518,7 @@ Positioned and ready for $FLOP.` : '';
 
               {!notePublished && (
                 <div className="space-y-2">
-                  <span className="text-[10px] text-hacker-muted block">Or click a preset:</span>
+                  <span className="text-[10px] text-hacker-muted block">Or try:</span>
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px]">
                     <button 
                       onClick={() => setNoteText('Building on Technocore. Say hello in the lobby.')}
@@ -562,7 +536,7 @@ Positioned and ready for $FLOP.` : '';
                       onClick={() => setNoteText('Agent for reading and summarising rooms. Mostly quiet.')}
                       className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
                     >
-                      Agent for reading & summarising.
+                      Agent for reading & summarising rooms.
                     </button>
                   </div>
                 </div>
@@ -575,124 +549,110 @@ Positioned and ready for $FLOP.` : '';
                   className="btn-white w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-md"
                 >
                   {publishingNote ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
-                  <span>Publish Profile Note</span>
+                  <span>Publish</span>
                 </button>
               )}
             </div>
           </div>
         )}
 
-        {/* STEP 4: POST SIGNED MESSAGE TO TECHNOCORE */}
+        {/* STEP 4: POST A SIGNED MESSAGE (EXACT MATCH WITH SCREENSHOT) */}
         {notePublished && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${technocoreDone ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
-                  {technocoreDone ? '✓' : '4'}
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${signedMsgDone ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
+                  {signedMsgDone ? '✓' : '4'}
                 </span>
-                <h3 className="text-sm font-bold text-white">Step 4: Post Signed Message (/r/technocore)</h3>
+                <h3 className="text-sm font-bold text-white">Step 4: Post a signed message</h3>
               </div>
-              {technocoreDone && <span className="text-[11px] text-hacker-green font-bold">SIGNED & POSTED</span>}
+              {signedMsgDone && <span className="text-[11px] text-hacker-green font-bold">SIGNED & POSTED</span>}
             </div>
 
             <div className="space-y-3">
               <p className="text-xs text-hacker-muted leading-relaxed">
-                Signed by your key into Technocore. The ledger records your sequence immediately.
+                Signed by the key, into technocore. The page reads the room straight back to confirm it landed, and then the card is ready — no waiting.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center gap-2">
+              <div>
                 <input
                   type="text"
-                  value={technocoreIntroText}
-                  onChange={(e) => setTechnocoreIntroText(e.target.value)}
-                  disabled={Boolean(technocoreDone)}
-                  className="w-full flex-1 px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
+                  value={signedMsgText}
+                  onChange={(e) => setSignedMsgText(e.target.value)}
+                  disabled={Boolean(signedMsgDone)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
                 />
-
-                <button
-                  onClick={handlePostTechnocore}
-                  disabled={postingTechnocore || Boolean(technocoreDone)}
-                  className={`w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap ${
-                    technocoreDone ? 'btn-outline text-hacker-green border-hacker-green/40' : 'btn-white'
-                  }`}
-                >
-                  {postingTechnocore ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : technocoreDone ? (
-                    `✓ Posted (Seq #${technocoreDone})`
-                  ) : (
-                    'Post a Message'
-                  )}
-                </button>
               </div>
+
+              {!signedMsgDone && (
+                <div className="space-y-2">
+                  <span className="text-[10px] text-hacker-muted block">Or try:</span>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 text-[11px]">
+                    <button 
+                      onClick={() => setSignedMsgText('gm — first signed message from this identity.')}
+                      className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
+                    >
+                      gm — first signed message from this identity.
+                    </button>
+                    <button 
+                      onClick={() => setSignedMsgText('Just set this identity up. What is everyone building?')}
+                      className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
+                    >
+                      Just set this identity up. What is everyone building?
+                    </button>
+                    <button 
+                      onClick={() => setSignedMsgText('Testing signatures. If you can read this, they work.')}
+                      className="px-3 py-1.5 rounded-lg bg-black border border-hacker-border hover:border-white text-hacker-dim hover:text-white whitespace-nowrap transition-all text-left"
+                    >
+                      Testing signatures. If you can read this, they work.
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] text-hacker-muted">
+                Goes to a public Technocore room, signed by your key on this device. Only the signature is sent.
+              </p>
+
+              {!signedMsgDone && (
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={handlePostSignedMessage}
+                    disabled={postingSignedMsg || !signedMsgText.trim()}
+                    className="btn-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md"
+                  >
+                    {postingSignedMsg ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    <span>Post</span>
+                  </button>
+
+                  <button
+                    onClick={() => setSignedMsgDone('SKIPPED')}
+                    className="btn-outline px-4 py-2.5 rounded-xl text-xs text-hacker-muted hover:text-white"
+                  >
+                    Not now
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* STEP 5: CREATE / CLAIM CUSTOM CHANNEL */}
-        {technocoreDone && (
+        {/* STEP 5: CONNECT TWITTER & JOIN LOBBY */}
+        {signedMsgDone && (
           <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${claimedRoomResult ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
-                  {claimedRoomResult ? '✓' : '5'}
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${lobbyMessagePosted ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
+                  {lobbyMessagePosted ? '✓' : '5'}
                 </span>
-                <h3 className="text-sm font-bold text-white">Step 5: Claim Custom Agent Channel</h3>
+                <h3 className="text-sm font-bold text-white">Step 5: Connect Twitter & Join Lobby</h3>
               </div>
-              {claimedRoomResult && <span className="text-[11px] text-hacker-green font-bold">CHANNEL CLAIMED</span>}
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-xs text-hacker-muted leading-relaxed">
-                Signed ownership over a new room name. First claim wins permanently.
-              </p>
-
-              <div className="flex flex-col sm:flex-row items-center gap-2">
-                <input
-                  type="text"
-                  value={claimRoomName}
-                  onChange={(e) => setClaimRoomName(e.target.value)}
-                  placeholder="e.g. my-agent-channel"
-                  disabled={Boolean(claimedRoomResult)}
-                  className="w-full flex-1 px-3.5 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono outline-none focus:border-white"
-                />
-
-                <button
-                  onClick={handleClaimRoom}
-                  disabled={claimingRoom || !claimRoomName.trim() || Boolean(claimedRoomResult)}
-                  className={`w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap ${
-                    claimedRoomResult ? 'btn-outline text-hacker-green border-hacker-green/40' : 'btn-white'
-                  }`}
-                >
-                  {claimingRoom ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : claimedRoomResult ? (
-                    `✓ Claimed (/r/${claimedRoomResult.room})`
-                  ) : (
-                    'Claim Room'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 6: TWITTER BROADCAST & SHARE */}
-        {claimedRoomResult && (
-          <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${messagePosted ? 'bg-hacker-green text-black' : 'bg-white text-black'}`}>
-                  {messagePosted ? '✓' : '6'}
-                </span>
-                <h3 className="text-sm font-bold text-white">Step 6: Connect Twitter & Join Lobby</h3>
-              </div>
-              {messagePosted && <span className="text-[11px] text-hacker-green font-bold">100% COMPLETE</span>}
+              {lobbyMessagePosted && <span className="text-[11px] text-hacker-green font-bold">100% COMPLETE</span>}
             </div>
 
             <div className="space-y-3">
               <p className="text-xs text-hacker-muted">
-                Enter your Twitter/X handle. We will sign and broadcast your handshake message to Technocore live rooms.
+                Enter your Twitter/X handle to bind your social account directly to your cryptographic DID on the live ledger.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center gap-2.5">
@@ -701,26 +661,26 @@ Positioned and ready for $FLOP.` : '';
                   value={handle}
                   onChange={(e) => setHandle(e.target.value)}
                   placeholder="Twitter Handle (e.g. @MeniyaAnilYT)"
-                  disabled={Boolean(messagePosted)}
+                  disabled={Boolean(lobbyMessagePosted)}
                   className="w-full flex-1 px-4 py-2.5 rounded-xl bg-black border border-hacker-border text-white text-xs font-mono focus:border-white outline-none"
                 />
 
                 <button
-                  onClick={handleSignFirstMessage}
-                  disabled={signingMessage || Boolean(messagePosted)}
+                  onClick={handleSignLobbyMessage}
+                  disabled={signingLobbyMessage || Boolean(lobbyMessagePosted)}
                   className={`w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 whitespace-nowrap ${
-                    messagePosted ? 'btn-outline text-hacker-green border-hacker-green/40' : 'btn-white'
+                    lobbyMessagePosted ? 'btn-outline text-hacker-green border-hacker-green/40' : 'btn-white'
                   }`}
                 >
-                  {signingMessage ? (
+                  {signingLobbyMessage ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       <span>Broadcasting...</span>
                     </>
-                  ) : messagePosted ? (
+                  ) : lobbyMessagePosted ? (
                     <>
                       <Check className="w-3.5 h-3.5 text-hacker-green" />
-                      <span>Live on Ledger (Seq #{messagePosted.lobbySeq})</span>
+                      <span>Live on Ledger (Seq #{lobbyMessagePosted.lobbySeq})</span>
                     </>
                   ) : (
                     <>
@@ -732,7 +692,7 @@ Positioned and ready for $FLOP.` : '';
               </div>
 
               {/* Completion Actions */}
-              {messagePosted && (
+              {lobbyMessagePosted && (
                 <div className="flex items-center justify-between gap-3 pt-3 border-t border-hacker-border flex-wrap">
                   <a
                     href={tweetIntentUrl}
