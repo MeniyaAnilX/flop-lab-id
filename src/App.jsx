@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import CreateAgent from './components/CreateAgent';
 import AgentCard from './components/AgentCard';
-import VerifyAgent from './components/VerifyAgent';
-import RoomExplorer from './components/RoomExplorer';
+import ChatRooms from './components/ChatRooms';
 import { Terminal, ExternalLink } from 'lucide-react';
 
-const STORAGE_KEY = 'flop_agent_state_v1';
+const STORAGE_KEY = 'flop_agent_state_v6';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('create');
@@ -52,12 +51,8 @@ export default function App() {
             <AgentCard initialIdentity={currentIdentity} />
           )}
 
-          {activeTab === 'verify' && (
-            <VerifyAgent onGoToCreate={() => setActiveTab('create')} />
-          )}
-
           {activeTab === 'rooms' && (
-            <RoomExplorer />
+            <ChatRooms onGoToCreate={() => setActiveTab('create')} />
           )}
         </main>
 

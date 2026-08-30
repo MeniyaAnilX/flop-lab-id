@@ -1,12 +1,10 @@
-import React from 'react';
-import { Terminal, PlusCircle, CreditCard, Search, Radio, Shield } from 'lucide-react';
+import { Terminal, PlusCircle, CreditCard, MessageSquare, Radio, Shield } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab }) {
   const navItems = [
     { id: 'create', label: 'Create', icon: PlusCircle, path: '/create' },
     { id: 'card', label: 'Card', icon: CreditCard, path: '/' },
-    { id: 'verify', label: 'Verify', icon: Search, path: '/v' },
-    { id: 'rooms', label: 'Rooms', icon: Radio, path: '/rooms' },
+    { id: 'rooms', label: 'Chat Rooms', icon: MessageSquare, path: '/rooms' },
   ];
 
   return (
