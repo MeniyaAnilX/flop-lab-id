@@ -21,8 +21,6 @@ import {
   RotateCcw,
   Ghost,
   Video,
-  Twitter,
-  FileCode2,
   CheckCircle2,
   Activity,
   Upload,
@@ -639,7 +637,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
   const contributionTypes = [
     { id: 'X Post', icon: MessageSquare },
     { id: 'Tool', icon: FileText },
-    { id: 'Video', icon: Tv },
+    { id: 'Video', icon: Video },
   ];
 
   return (
