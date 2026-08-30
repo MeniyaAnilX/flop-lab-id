@@ -15,6 +15,8 @@ import {
   Search
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { Lottie } from 'lottie-react';
+import robotAnimation from '../assets/robot.json';
 import { parseDid, getAgentVisuals } from '../lib/crypto';
 import { verifyDidStatus, readKvNote, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
@@ -126,9 +128,6 @@ export default function AgentCard({ initialIdentity }) {
 
   // Actual Network Recording Status
   const isRecordedOnLedger = Boolean(noteContent || statusData?.lobbyVerified || statusData?.technocoreVerified);
-  const qrUrl = currentDid 
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`https://technocore.chat/humans#did/${currentDid}`)}&color=FFFFFF&bgcolor=000000`
-    : '';
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 font-mono">
@@ -237,14 +236,21 @@ export default function AgentCard({ initialIdentity }) {
 
               {/* Card Body */}
               <div className="grid grid-cols-3 gap-4 mb-6 relative z-10">
-                {/* QR Code */}
-                <div className="col-span-1 flex flex-col items-center justify-center p-3 rounded-2xl bg-hacker-card border border-hacker-border">
-                  {qrUrl && (
-                    <div className="w-24 h-24 rounded-lg overflow-hidden bg-black p-1 border border-white/20 mb-2">
-                      <img src={qrUrl} alt="DID QR" className="w-full h-full object-contain filter invert" />
-                    </div>
-                  )}
-                  <span className="text-[9px] text-hacker-muted uppercase tracking-wider">SCAN TO VERIFY</span>
+                {/* Animated Robot Avatar */}
+                <div className="col-span-1 flex flex-col items-center justify-center p-3 rounded-2xl bg-hacker-card border border-hacker-border relative overflow-hidden group">
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-white/20 mb-2 shadow-inner relative p-1">
+                    <Lottie 
+                      animationData={robotAnimation} 
+                      loop={true} 
+                      autoplay={true}
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-hacker-green animate-ping"></div>
+                    <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-hacker-green"></div>
+                  </div>
+                  <span className="text-[9px] text-hacker-muted uppercase tracking-wider font-bold">
+                    AUTONOMOUS AVATAR
+                  </span>
                 </div>
 
                 {/* Info Column */}
