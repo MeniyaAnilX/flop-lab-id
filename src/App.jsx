@@ -62,7 +62,7 @@ export default function App() {
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-white"></span>
               <span>
-                FlopLabID Tool Built By{' '}
+                FlopLab Tool Built By{' '}
                 <a
                   href="https://x.com/MeniyaAnilX"
                   target="_blank"

@@ -215,7 +215,7 @@ export default function AgentCard({ initialIdentity }) {
                   </div>
                   <div>
                     <h3 className="font-black text-lg text-white tracking-wider">
-                      FLOP_LAB // AGENT_ID
+                      FLOPLAB // AGENT_ID
                     </h3>
                     <p className="text-[10px] text-hacker-muted uppercase tracking-widest">W3C ED25519 PROTOCOL</p>
                   </div>

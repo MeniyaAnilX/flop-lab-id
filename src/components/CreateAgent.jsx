@@ -335,14 +335,14 @@ export default function CreateAgent({ onAgentCreated, onViewCard }) {
   // Step 2: Downloads
   const handleDownloadTxt = () => {
     if (!identity) return;
-    const content = `FLOP LAB ID - AGENT CREDENTIALS
+    const content = `FLOPLAB - AGENT CREDENTIALS
 ================================
 Public DID: ${identity.did}
 Private Seed: ${identity.seed64Hex}
 Fingerprint: ${identity.fingerprint}
 Created: ${identity.createdAt}
 
-KEEP THIS SAFE. Needed to claim your $FLOP allocation.`;
+KEEP THIS SAFE. Needed to authenticate and manage your FlopLab agent.`;
     
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);

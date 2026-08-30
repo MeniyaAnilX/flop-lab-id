@@ -20,10 +20,9 @@ export default function Navbar({ activeTab, setActiveTab }) {
           </div>
           <div>
             <div className="flex items-center gap-1.5 font-bold text-lg tracking-tight text-white group-hover:text-hacker-green transition-colors">
-              <span>FLOP_LAB</span>
-              <span className="text-[11px] bg-white/10 text-white px-1.5 py-0.5 rounded border border-white/20">ID</span>
+              <span>FLOPLAB</span>
             </div>
-            <p className="text-[9px] text-hacker-muted uppercase tracking-widest -mt-0.5">// anonymous agent core</p>
+            <p className="text-[9px] text-hacker-muted uppercase tracking-widest -mt-0.5">// autonomous agent suite</p>
           </div>
         </div>
 
