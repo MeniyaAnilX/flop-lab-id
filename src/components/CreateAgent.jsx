@@ -16,7 +16,6 @@ import {
   Lock,
   MessageSquare,
   Home,
-  Link as LinkIcon,
   ShieldAlert,
   RotateCcw,
   Ghost,
@@ -1629,28 +1628,7 @@ Verified and active for Flop Labs Autonomous Agent Economy.` : '';
               </div>
             </div>
 
-            {/* 3. Make a proof link */}
-            <div className="hacker-panel rounded-2xl p-5 md:p-6 flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center flex-shrink-0">
-                  <LinkIcon className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white">Make a proof link</h4>
-                  <p className="text-xs text-hacker-muted">Anyone can screenshot a card. This one can be checked.</p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => copyToClipboard(`https://technocore.chat/humans#did/${identity.did}`, 'proof_link')}
-                className="btn-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
-              >
-                {copiedField === 'proof_link' ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedField === 'proof_link' ? 'Copied URL' : 'Generate Proof Link'}</span>
-              </button>
-            </div>
-
-            {/* 4. Open a private room */}
+            {/* 3. Open a private room */}
             <div className="hacker-panel rounded-2xl p-5 md:p-6 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center flex-shrink-0">
