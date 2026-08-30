@@ -53,6 +53,7 @@ export default function AgentCard({ initialIdentity }) {
       return '';
     } catch { return ''; }
   });
+  const [statusData, setStatusData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
