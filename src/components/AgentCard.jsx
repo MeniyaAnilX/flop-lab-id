@@ -15,7 +15,7 @@ import {
   Search
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import robotSvg from '../assets/robot.svg';
+import RobotAvatar from './RobotAvatar';
 import { parseDid, getAgentVisuals } from '../lib/crypto';
 import { verifyDidStatus, readKvNote, TECHNOCORE_BASE_URL } from '../lib/technocore';
 
@@ -100,10 +100,15 @@ export default function AgentCard({ initialIdentity }) {
     if (!cardRef.current) return;
     setDownloading(true);
     try {
+      if (document.fonts) {
+        await document.fonts.ready;
+      }
+
       const canvas = await html2canvas(cardRef.current, {
         scale: 3,
         backgroundColor: '#000000',
         useCORS: true,
+        allowTaint: true,
         logging: false
       });
 
@@ -221,14 +226,14 @@ export default function AgentCard({ initialIdentity }) {
 
                 {/* Real-time Status Badge */}
                 {isRecordedOnLedger ? (
-                  <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-hacker-green/10 border border-hacker-green/40 text-hacker-green text-[11px] font-bold">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>VERIFIED AGENT</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-hacker-green/10 border border-hacker-green/50 text-hacker-green text-xs font-mono font-bold tracking-wide">
+                    <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="leading-none pt-0.5">VERIFIED AGENT</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-400/10 border border-amber-400/40 text-amber-300 text-[11px] font-bold">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>PENDING ON-CHAIN RECORD</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/50 text-amber-300 text-xs font-mono font-bold tracking-wide">
+                    <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="leading-none pt-0.5">PENDING ON-CHAIN RECORD</span>
                   </div>
                 )}
               </div>
@@ -238,11 +243,7 @@ export default function AgentCard({ initialIdentity }) {
                 {/* Animated Robot Avatar Box */}
                 <div className="col-span-1 flex items-center justify-center p-2 rounded-2xl bg-hacker-card border border-hacker-border overflow-hidden">
                   <div className="w-full h-full min-h-[110px] rounded-xl overflow-hidden bg-black flex items-center justify-center border border-white/10 p-1">
-                    <img 
-                      src={robotSvg} 
-                      alt="AI Agent Avatar" 
-                      className="w-full h-full object-contain pointer-events-none select-none max-h-[130px]"
-                    />
+                    <RobotAvatar className="w-full h-full object-contain pointer-events-none select-none max-h-[130px]" />
                   </div>
                 </div>
 
