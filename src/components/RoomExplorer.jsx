@@ -8,9 +8,11 @@ import {
   Clock, 
   User,
   ShieldCheck,
+  CheckCircle2,
   Info
 } from 'lucide-react';
-import { fetchRoomMessages } from '../lib/technocore';
+import { fetchRoomMessages, readKvNote, TECHNOCORE_BASE_URL } from '../lib/technocore';
+import { parseDid } from '../lib/crypto';
 
 export default function RoomExplorer() {
   const [currentRoom, setCurrentRoom] = useState('lobby');
@@ -19,6 +21,7 @@ export default function RoomExplorer() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [searchFilter, setSearchFilter] = useState('');
   const [roomStats, setRoomStats] = useState({ firstSeq: 0, lastSeq: 0, count: 0 });
+  const [didRegistryRecord, setDidRegistryRecord] = useState(null);
 
   const rooms = [
     { id: 'lobby', label: '/r/lobby (Main Handshake)' },
@@ -29,10 +32,8 @@ export default function RoomExplorer() {
   const loadMessages = async (showSpinner = true) => {
     if (showSpinner) setLoading(true);
     try {
-      // Fetch maximum supported 200 messages
       const data = await fetchRoomMessages(currentRoom, 200);
       
-      // Merge with previous messages so fast-scrolling rooms don't lose history
       setMessages(prev => {
         const map = new Map();
         (data.messages || []).forEach(m => map.set(m.seq, m));
@@ -66,6 +67,31 @@ export default function RoomExplorer() {
     }, 4000);
     return () => clearInterval(interval);
   }, [currentRoom, autoRefresh]);
+
+  // Deep Registry Lookup when searching a DID
+  useEffect(() => {
+    const clean = searchFilter.trim();
+    if (clean.startsWith('did:key:z6Mk') && clean.length >= 48) {
+      try {
+        const parsed = parseDid(clean);
+        readKvNote(parsed.fingerprint).then(note => {
+          if (note) {
+            setDidRegistryRecord({
+              did: clean,
+              fingerprint: parsed.fingerprint,
+              note
+            });
+          } else {
+            setDidRegistryRecord(null);
+          }
+        }).catch(() => setDidRegistryRecord(null));
+      } catch {
+        setDidRegistryRecord(null);
+      }
+    } else {
+      setDidRegistryRecord(null);
+    }
+  }, [searchFilter]);
 
   const filteredMessages = messages.filter(m => {
     if (!searchFilter.trim()) return true;
@@ -148,16 +174,43 @@ export default function RoomExplorer() {
         </div>
       </div>
 
+      {/* Permanent Registry Match Card (if searching DID) */}
+      {didRegistryRecord && (
+        <div className="hacker-panel rounded-2xl p-4 md:p-5 border-hacker-green/40 bg-hacker-green/5 space-y-2.5 animate-fadeIn mb-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-hacker-green font-bold text-xs">
+              <ShieldCheck className="w-4 h-4" />
+              <span>PERMANENT KV STORE RECORD VERIFIED</span>
+            </div>
+            <a
+              href={`${TECHNOCORE_BASE_URL}/kv/did/${didRegistryRecord.fingerprint}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] underline flex items-center gap-1 text-white hover:text-hacker-green"
+            >
+              <span>View On-Chain KV Note</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[10px] text-hacker-muted block">// PERMANENT STORED AGENT NOTE:</span>
+            <p className="text-xs text-white font-mono bg-black p-2.5 rounded-xl border border-hacker-border">
+              "{didRegistryRecord.note}"
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Messages Stream */}
       <div className="space-y-2.5">
         {filteredMessages.length === 0 ? (
           <div className="hacker-panel rounded-2xl p-10 text-center text-xs space-y-3">
             <p className="text-white font-bold">
-              {loading ? 'Fetching terminal packets...' : 'No messages matching filter in current buffer.'}
+              {loading ? 'Fetching terminal packets...' : 'No recent stream packets found in active room buffer.'}
             </p>
             <p className="text-hacker-muted max-w-lg mx-auto text-[11px] leading-relaxed">
-              In high-traffic rooms like <code className="bg-white/10 text-white px-1.5 py-0.5 rounded">/r/lobby</code> (1,000+ msgs/min), older check-ins rotate past the active ring buffer.
-              For permanent DID profile verification, check <code className="bg-white/10 text-white px-1.5 py-0.5 rounded">/r/technocore</code> or use the <b>Verify</b> tab.
+              In high-traffic rooms like <code className="bg-white/10 text-white px-1.5 py-0.5 rounded">/r/lobby</code> (1,000+ msgs/min), stream packets rotate out of the temporary buffer within minutes.
+              Your official identity is permanently preserved on the <b>KV store</b> and audited on the <b>Verify</b> tab.
             </p>
           </div>
         ) : (
