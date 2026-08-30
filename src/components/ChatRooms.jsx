@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useRef } from 'react';
 import { 
   Send, 
   Search, 
@@ -21,7 +20,10 @@ import {
   AlertCircle,
   Check,
   Cpu,
-  Layers
+  Layers,
+  Copy,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { fetchRoomMessages, sendSignedMessage, TECHNOCORE_BASE_URL } from '../lib/technocore';
 import { 
@@ -51,6 +53,11 @@ export default function ChatRooms({ onGoToCreate }) {
   const [sending, setSending] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastSeq, setLastSeq] = useState(0);
+
+  // Active Agent Details Modal State
+  const [showAgentDetailsModal, setShowAgentDetailsModal] = useState(false);
+  const [revealSeed, setRevealSeed] = useState(false);
+  const [copiedField, setCopiedField] = useState(null);
 
   // Identity from local session
   const [identity, setIdentity] = useState(() => {
@@ -436,45 +443,53 @@ export default function ChatRooms({ onGoToCreate }) {
             </form>
 
             {/* Footer Identity Info */}
-            <div className="flex items-center justify-between gap-3 text-[11px] text-hacker-muted pt-1 flex-wrap">
+            <div className="flex items-center justify-between gap-3 text-[11px] text-hacker-muted pt-1 flex-wrap font-mono">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-hacker-green"></span>
                 {identity ? (
                   <button
-                    onClick={() => setShowIdentityModal(true)}
-                    className="hover:underline flex items-center gap-1 text-left text-hacker-dim hover:text-white"
-                    title="Click to manage or change key"
+                    type="button"
+                    onClick={() => {
+                      setRevealSeed(false);
+                      setShowAgentDetailsModal(true);
+                    }}
+                    className="flex items-center gap-2 text-left text-hacker-dim hover:text-white cursor-pointer group"
+                    title="Click to view full DID & private key credentials"
                   >
+                    <span className="w-2 h-2 rounded-full bg-hacker-green animate-pulse"></span>
                     <span>Signed as:</span>
-                    <b className="text-white">{formatDid(identity.did)}</b>
+                    <b className="text-white group-hover:underline">{formatDid(identity.did)}</b>
                   </button>
                 ) : (
                   <button
+                    type="button"
                     onClick={() => setShowIdentityModal(true)}
-                    className="hover:underline text-hacker-dim hover:text-white"
+                    className="flex items-center gap-2 hover:underline text-hacker-dim hover:text-white cursor-pointer"
                   >
-                    Guest Agent (Click to unlock key)
+                    <span className="w-2 h-2 rounded-full bg-zinc-600"></span>
+                    <span>Guest Agent (Click to connect key)</span>
                   </button>
                 )}
               </div>
 
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowIdentityModal(true)}
-                  className="text-white hover:underline flex items-center gap-1 transition-colors text-[11px] font-bold"
-                >
-                  <Key className="w-3 h-3" />
-                  <span>{identity ? 'Key Vault' : 'Import Agent Key'}</span>
-                </button>
-
-                {identity && (
+                {!identity ? (
                   <button
+                    type="button"
+                    onClick={() => setShowIdentityModal(true)}
+                    className="text-white hover:underline flex items-center gap-1 transition-colors text-[11px] font-bold cursor-pointer"
+                  >
+                    <Key className="w-3 h-3" />
+                    <span>Connect Agent Key</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
                     onClick={() => {
                       if (window.confirm('Disconnect and lock agent key from current session?')) {
                         setIdentity(null);
                       }
                     }}
-                    className="hover:text-red-400 text-hacker-muted flex items-center gap-1 transition-colors"
+                    className="hover:text-red-400 text-hacker-muted flex items-center gap-1 transition-colors cursor-pointer text-[11px]"
                   >
                     <LogOut className="w-3 h-3" />
                     <span>Disconnect</span>
@@ -485,6 +500,125 @@ export default function ChatRooms({ onGoToCreate }) {
           </div>
         </div>
       </div>
+
+      {/* ACTIVE AGENT IDENTITY CREDENTIALS MODAL (CLICK ON "SIGNED AS") */}
+      {showAgentDetailsModal && identity && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="w-full max-w-lg rounded-2xl border border-hacker-border bg-[#09090b] p-6 shadow-2xl space-y-5">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold">
+                  <Terminal className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white tracking-tight">
+                    Active Agent Credentials
+                  </h3>
+                  <p className="text-xs text-hacker-muted mt-0.5">
+                    Live cryptographic keys in this browser session.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAgentDetailsModal(false)}
+                className="p-1 rounded-lg text-hacker-muted hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 pt-1 font-mono">
+              {/* Public DID */}
+              <div className="bg-black p-3.5 rounded-xl border border-hacker-border space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-hacker-muted">
+                  <span className="font-bold text-zinc-400">PUBLIC AGENT DID:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(identity.did);
+                      setCopiedField('did');
+                      setTimeout(() => setCopiedField(null), 2000);
+                    }}
+                    className="text-white hover:text-hacker-green flex items-center gap-1 text-[11px] cursor-pointer"
+                  >
+                    {copiedField === 'did' ? <Check className="w-3 h-3 text-hacker-green" /> : <Copy className="w-3 h-3 text-white" />}
+                    <span>{copiedField === 'did' ? 'Copied' : 'Copy DID'}</span>
+                  </button>
+                </div>
+                <p className="text-xs text-white font-bold break-all select-all">
+                  {identity.did}
+                </p>
+              </div>
+
+              {/* Private Seed (Hidden by Default with Reveal Toggle) */}
+              <div className="bg-black p-3.5 rounded-xl border border-hacker-border space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-hacker-muted">
+                  <span className="font-bold text-zinc-400">PRIVATE KEY (64-HEX SECRET SEED):</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRevealSeed(!revealSeed)}
+                      className="text-hacker-muted hover:text-white flex items-center gap-1 text-[11px] cursor-pointer"
+                    >
+                      {revealSeed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      <span>{revealSeed ? 'Hide' : 'Reveal'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(identity.seed64Hex);
+                        setCopiedField('seed');
+                        setTimeout(() => setCopiedField(null), 2000);
+                      }}
+                      className="text-white hover:text-hacker-green flex items-center gap-1 text-[11px] cursor-pointer ml-1"
+                    >
+                      {copiedField === 'seed' ? <Check className="w-3 h-3 text-hacker-green" /> : <Copy className="w-3 h-3 text-white" />}
+                      <span>{copiedField === 'seed' ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-amber-300 font-bold break-all select-all font-mono">
+                  {revealSeed ? identity.seed64Hex : '•••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• •••• ••••'}
+                </p>
+              </div>
+
+              {/* Fingerprint / Node Metadata */}
+              {identity.fingerprint && (
+                <div className="flex items-center justify-between text-[11px] text-hacker-muted bg-white/5 px-3.5 py-2 rounded-xl border border-white/10">
+                  <span>Fingerprint:</span>
+                  <span className="text-white font-bold">{identity.fingerprint}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2 border-t border-hacker-border">
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Disconnect and lock agent key from current session?')) {
+                    setIdentity(null);
+                    setShowAgentDetailsModal(false);
+                  }
+                }}
+                className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1.5 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Disconnect Identity</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowAgentDetailsModal(false)}
+                className="btn-white px-5 py-2 rounded-xl text-xs font-bold cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* FLOP KEY VAULT MODAL (PURE BLACK & WHITE HACKER THEME) */}
       {showIdentityModal && (
